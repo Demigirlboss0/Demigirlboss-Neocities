@@ -29,7 +29,12 @@ When you run `build.py`, the following sequence occurs:
    - `<h1>` tags are injected with `data-text` for glitch effects.
    - HTML/CSS is sanitized via `bleach` and `tinycss2`.
 5. **Render:** Content is injected into Jinja2 templates. `base_path` is calculated based on directory depth to ensure portable asset links.
-6. **Deploy:** (Optional) Files are POSTed to the Neocities API.
+6. **Syndicate:** An `atom.xml` feed is generated using the `templates/atom.xml` template. This involves:
+   - Sorting content by date.
+   - Converting dates to ISO 8601 format.
+   - Using absolute URLs (defined in `config.py`).
+   - Force-escaping HTML content for XML safety.
+7. **Deploy:** (Optional) Files are POSTed to the Neocities API.
 
 ## 3. Design System: Cyber-Catppuccin
 

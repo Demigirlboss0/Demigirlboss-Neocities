@@ -66,3 +66,10 @@ PYTHONPATH=. python3 tests/test_builder.py
 ## 5. Helpful Tips
 - **Strikethrough:** Use `~~text~~` for ~~strikethrough~~.
 - **Internal Links:** You can link to other markdown files using `.md` (e.g., `[Link](page.md)`). The builder converts these to `.html` automatically.
+
+## 6. Syndication (Atom Feed)
+
+The site automatically generates an Atom feed at `/atom.xml` during every build. 
+- Feed readers can auto-discover this link.
+- A direct link is provided in the sidebar under "Subscribed?".
+- The feed includes the full HTML content of your 20 most recent updates.
