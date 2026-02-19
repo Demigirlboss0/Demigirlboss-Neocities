@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 data-text="Portfolio">Portfolio</h1>
+
+{% if portfolio_items %}
+<div class="portfolio-grid">
+    {% for item in portfolio_items %}
+    <article class="portfolio-card">
+        <a href="{{ item.url }}">
+            {% if item.metadata.thumbnail %}
+            <div class="portfolio-thumbnail-container">
+                <img src="{{ item.metadata.thumbnail }}" 
+                     alt="{{ item.title }}" 
+                     class="portfolio-thumbnail">
+            </div>
+            {% else %}
+            <div class="portfolio-thumbnail-placeholder">
+                <span>No thumbnail</span>
+            </div>
+            {% endif %}
+            <div class="portfolio-card-info">
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.metadata.description or "No description available" }}</p>
+                <span class="portfolio-date">{{ item.date_display }}</span>
+            </div>
+        </a>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="construction-banner">
+    <p>Portfolio coming soon! Check back later.</p>
+</div>
+{% endif %}
+{% endblock %}

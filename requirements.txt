@@ -1,0 +1,6 @@
+markdown
+python-frontmatter
+jinja2
+PyYAML
+bleach
+tinycss2

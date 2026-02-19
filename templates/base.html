@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{ title }}</title>
+    <link href="{{ base_path }}style.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<body>
+    <div class="neon-rain">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    {% include 'header.html' %}
+
+    <div class="container">
+        <main>
+            {% block content %}
+            {{ content | safe }}
+            {% endblock %}
+        </main>
+        {% include 'sidebar.html' %}
+    </div>
+
+    {% include 'footer.html' %}
+</body>
+</html>

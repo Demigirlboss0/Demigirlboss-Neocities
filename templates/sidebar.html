@@ -1,0 +1,21 @@
+<aside class="sidebar">
+    <h2>Latest Updates</h2>
+    <ul class="updates">
+        {% for update in updates %}
+        <li>
+            <a href="{{ update.url }}" class="update-link">
+                <span class="update-title">{{ update.title }}</span>
+                <span class="update-date">{{ update.date_display }}</span>
+                <span class="update-category">{{ update.category }}</span>
+            </a>
+        </li>
+        {% else %}
+        <li>No recent updates.</li>
+        {% endfor %}
+    </ul>
+
+    <div class="rss-notice">
+        <h3>RSS Feed</h3>
+        <p>Coming soon! <span class="blink"></span></p>
+    </div>
+</aside>
