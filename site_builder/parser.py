@@ -78,7 +78,10 @@ class ContentParser:
         # 1. Resolve .md links to .html links safely
         html_content = self._resolve_internal_links(html_content)
 
-        # 2. Inject data-text for glitch effects
+        # 2. Resolve strikethroughs
+        html_content = self._resolve_strikethrough(html_content)
+
+        # 3. Inject data-text for glitch effects
         html_content = self._inject_glitch_data(html_content)
 
         # 3. Sanitize HTML and CSS
@@ -130,6 +133,11 @@ class ContentParser:
             msg = f"Missing required metadata for {category} in {file_path}: {', '.join(missing)}"
             logger.warning(msg)
             print(f"WARNING: {msg}", file=sys.stderr)
+
+    def _resolve_strikethrough(self, html: str) -> str:
+        """Converts ~~text~~ to <del>text</del>."""
+        pattern = r'~~(.*?)~~'
+        return re.sub(pattern, r'<del>\1</del>', html)
 
     def _inject_glitch_data(self, html: str) -> str:
         """Injects data-text attribute into h1 tags for CSS glitch effects."""

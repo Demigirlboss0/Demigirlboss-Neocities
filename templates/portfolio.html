@@ -8,17 +8,21 @@
     {% for item in portfolio_items %}
     <article class="portfolio-card">
         <a href="{{ item.url }}">
-            {% if item.metadata.thumbnail %}
             <div class="portfolio-thumbnail-container">
+                {% if item.metadata.thumbnail %}
                 <img src="{{ item.metadata.thumbnail }}" 
                      alt="{{ item.title }}" 
                      class="portfolio-thumbnail">
+                {% elif item.metadata.image %}
+                <img src="{{ item.metadata.image }}" 
+                     alt="{{ item.title }}" 
+                     class="portfolio-thumbnail">
+                {% else %}
+                <div class="portfolio-thumbnail-placeholder">
+                    <span>NO_IMAGE</span>
+                </div>
+                {% endif %}
             </div>
-            {% else %}
-            <div class="portfolio-thumbnail-placeholder">
-                <span>No thumbnail</span>
-            </div>
-            {% endif %}
             <div class="portfolio-card-info">
                 <h3>{{ item.title }}</h3>
                 <p>{{ item.metadata.description or "No description available" }}</p>

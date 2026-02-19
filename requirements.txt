@@ -4,3 +4,5 @@ jinja2
 PyYAML
 bleach
 tinycss2
+python-dotenv
+requests

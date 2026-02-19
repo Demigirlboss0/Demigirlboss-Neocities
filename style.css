@@ -111,12 +111,15 @@ nav a {
     font-weight: 800;
     font-size: 0.7rem;
     letter-spacing: 1px;
-    padding: 8px 15px;
+    padding: 4px 15px; /* Reduced vertical padding */
     transition: 0.2s;
+    display: inline-block;
+    border-bottom: 2px solid transparent; /* Always reserve space for the border */
 }
 
 nav a:hover {
     color: var(--mauve);
+    border-bottom-color: var(--mauve);
     text-shadow: 0 0 10px var(--mauve);
 }
 
@@ -140,6 +143,7 @@ main {
     position: relative;
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%);
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    z-index: 10;
 }
 
 main::before {
@@ -206,6 +210,7 @@ a:hover {
     border-top: 4px solid var(--sapphire);
     padding: 25px;
     clip-path: polygon(0 15px, 15px 0, 100% 0, 100% 100%, 0 100%);
+    z-index: 10;
 }
 
 .sidebar h2 {
@@ -232,32 +237,26 @@ a:hover {
     transform: translateX(5px);
 }
 
-/* TYPOGRAPHY SWAP: Dates/Categories are now prominent */
+/* TYPOGRAPHY SWAP: Titles are prominent again */
 .update-title {
-    color: var(--overlay);
-    font-weight: 400;
-    font-size: 0.75rem;
+    color: var(--peach);
+    font-weight: 800;
+    font-size: 1rem;
     display: block;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin-bottom: 4px;
 }
 
 .update-date, .update-category {
     color: var(--lavender);
-    font-weight: 800;
-    font-size: 0.95rem;
+    font-weight: 400;
+    font-size: 0.75rem;
     display: inline-block;
 }
 
 .update-category {
     margin-left: 10px;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    background: rgba(180, 190, 254, 0.1);
-    border: 1px solid var(--lavender);
-    border-radius: 4px;
-    vertical-align: middle;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* ======================
@@ -270,7 +269,7 @@ a:hover {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: -1;
+    z-index: 0; /* Sit between background and content */
     overflow: hidden;
 }
 
@@ -279,8 +278,9 @@ a:hover {
     width: 1px;
     height: 150px;
     background: linear-gradient(to bottom, transparent, var(--mauve));
-    opacity: 0.3;
+    opacity: 0.4; /* Increased opacity */
     animation: fall linear infinite;
+    filter: drop-shadow(0 0 5px var(--mauve));
 }
 
 /* Randomize positions and speeds for the 20 streaks */
@@ -315,11 +315,11 @@ a:hover {
 }
 
 /* ======================
-   PORTFOLIO CARDS
+   PORTFOLIO CARDS (AUTO-SCALING)
    ====================== */
 .portfolio-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 25px;
 }
 
@@ -328,6 +328,8 @@ a:hover {
     border: 1px solid var(--glass-border);
     clip-path: polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%);
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
 }
 
 .portfolio-card:hover {
@@ -336,15 +338,57 @@ a:hover {
     box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 0 20px rgba(203, 166, 247, 0.2);
 }
 
+.portfolio-card a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.portfolio-thumbnail-container {
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background: var(--crust);
+    border-bottom: 1px solid var(--glass-border);
+}
+
 .portfolio-thumbnail {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
+    height: 100%;
+    object-fit: cover; /* DYNAMIC SCALING */
     opacity: 0.8;
+    transition: 0.5s ease;
 }
 
 .portfolio-card:hover .portfolio-thumbnail {
     opacity: 1;
+    transform: scale(1.08);
+}
+
+.portfolio-card-info {
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.portfolio-card-info h3 {
+    color: var(--peach);
+    margin: 0 0 10px 0;
+    font-size: 1.3rem;
+}
+
+/* ======================
+   PORTFOLIO CONTENT IMAGES
+   ====================== */
+.portfolio-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 30px auto;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 /* ======================

@@ -1,11 +1,17 @@
 import shutil
+import os
+import requests
 from pathlib import Path
 from typing import List, Dict, Any
+from dotenv import load_dotenv
 
 from site_builder import (
     CONTENT_DIR, OUTPUT_DIR, STATIC_DIR, TEMPLATES_DIR,
     ContentParser, SiteRenderer, ParsedContent, logger
 )
+
+# Load environment variables (API Key)
+load_dotenv()
 
 class SiteBuilder:
     def __init__(self):
@@ -21,23 +27,82 @@ class SiteBuilder:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     def copy_static(self):
-        """Copies static assets and the global stylesheet."""
-        logger.info("Copying static assets...")
+        """Copies static assets from both root/static and content/static."""
+        logger.info("Synchronizing static assets...")
         
-        # Copy global style.css from root if it exists
+        # 1. Copy global style.css
         style_css = Path("style.css")
         if style_css.exists():
             shutil.copy(style_css, OUTPUT_DIR / "style.css")
         
-        # Copy the static folder
+        # 2. Copy root/static folder (Global assets)
         if STATIC_DIR.exists():
             shutil.copytree(STATIC_DIR, OUTPUT_DIR / "static", dirs_exist_ok=True)
+
+        # 3. Copy content/static folder (Content-specific assets)
+        content_static = CONTENT_DIR / "static"
+        if content_static.exists():
+            logger.info("Merging content/static into output...")
+            shutil.copytree(content_static, OUTPUT_DIR / "static", dirs_exist_ok=True)
+
+    def deploy(self):
+        """Deploys the output directory directly to Neocities via the API."""
+        api_key = os.getenv("NEOCITIES_API_KEY")
+        if not api_key:
+            logger.error("NEOCITIES_API_KEY not found in .env file!")
+            return
+
+        logger.info("🚀 Initiating deployment to Neocities...")
+        
+        # Neocities API expects files to be uploaded via POST /api/upload
+        # We'll upload all files found in the output directory
+        url = "https://neocities.org/api/upload"
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        try:
+            files_to_upload = {}
+            # Open all files for uploading
+            opened_files = []
+            
+            for root, _, files in os.walk(OUTPUT_DIR):
+                for file in files:
+                    local_path = Path(root) / file
+                    remote_path = local_path.relative_to(OUTPUT_DIR)
+                    
+                    # We open the file and add it to the multipart/form-data
+                    # The key is the remote filename
+                    f = open(local_path, 'rb')
+                    opened_files.append(f)
+                    files_to_upload[str(remote_path)] = f
+
+            if not files_to_upload:
+                logger.info("No files to upload.")
+                return
+
+            logger.info(f"Syncing {len(files_to_upload)} files...")
+            response = requests.post(url, headers=headers, files=files_to_upload)
+            
+            # Close all files
+            for f in opened_files:
+                f.close()
+
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("result") == "success":
+                    logger.info("✅ Deployment successful!")
+                else:
+                    logger.error(f"❌ Deployment failed: {result.get('message')}")
+            else:
+                logger.error(f"❌ Deployment failed with status {response.status_code}: {response.text}")
+
+        except Exception as e:
+            logger.error(f"❌ Deployment error: {e}")
 
     def crawl_content(self):
         """Finds and parses all markdown files in the content directory."""
         logger.info(f"Crawling content in: {CONTENT_DIR}")
         for md_file in CONTENT_DIR.rglob("*.md"):
-            if md_file.name.endswith(".bak"):  # Ignore backup files
+            if md_file.name.endswith(".bak"):
                 continue
             try:
                 parsed = self.parser.parse_file(md_file)
@@ -71,13 +136,10 @@ class SiteBuilder:
 
         # Build individual pages
         for content in self.all_content:
-            # Determine template based on content type
             template = 'base.html'
             if 'portfolio' in str(content.url):
                 template = 'portfolio-item.html'
             
-            # Map the URL to an actual file path in output/
-            # Remove leading slash and handle index files
             rel_url = content.url.lstrip('/')
             output_file = OUTPUT_DIR / rel_url
             output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -93,10 +155,7 @@ class SiteBuilder:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(html)
 
-        # Build Special Index Pages
         self.build_portfolio_index(updates)
-        # (Optional: Add blog index or others here)
-
         logger.info("Build Complete! ✨")
 
     def build_portfolio_index(self, updates):
@@ -106,13 +165,10 @@ class SiteBuilder:
         ]
         portfolio_items.sort(key=lambda x: x.date, reverse=True)
 
-        # Create a dummy ParsedContent for the index itself if one doesn't exist
-        # Or look for content/portfolio/index.md
         portfolio_index_md = CONTENT_DIR / "portfolio" / "index.md"
         if portfolio_index_md.exists():
             content_obj = self.parser.parse_file(portfolio_index_md)
         else:
-            # Fallback if no index.md exists
             from datetime import date
             content_obj = ParsedContent(
                 title="Portfolio",
@@ -139,5 +195,10 @@ class SiteBuilder:
             f.write(html)
 
 if __name__ == "__main__":
+    import sys
+    
     builder = SiteBuilder()
     builder.build()
+    
+    if "--deploy" in sys.argv:
+        builder.deploy()
