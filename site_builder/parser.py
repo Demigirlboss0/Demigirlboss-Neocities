@@ -19,6 +19,7 @@ class ParsedContent:
     title: str
     date: datetime.date
     date_display: str
+    iso_date: str # Added for Atom/RSS
     slug: str
     content: str
     raw_content: str
@@ -113,6 +114,7 @@ class ContentParser:
             title=str(metadata.get('title', slug.replace('_', ' ').title())),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
+            iso_date=date_obj.strftime('%Y-%m-%dT12:00:00Z'),
             slug=slug,
             content=html_content,
             raw_content=post.content,

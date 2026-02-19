@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>{{ site_title }}</title>
+    <subtitle>Updates from the Command Deck</subtitle>
+    <link href="{{ site_url }}/atom.xml" rel="self" />
+    <link href="{{ site_url }}/" />
+    <id>{{ site_url }}/</id>
+    <updated>{{ last_updated }}</updated>
+    <author>
+        <name>{{ site_title }}</name>
+    </author>
+
+    {% for item in items %}
+    <entry>
+        <title>{{ item.title }}</title>
+        <link href="{{ site_url }}{{ item.url }}" />
+        <id>{{ site_url }}{{ item.url }}</id>
+        <updated>{{ item.iso_date }}</updated>
+        <summary>{{ item.category }} - {{ item.date_display }}</summary>
+        <content type="html">{{ item.content | forceescape }}</content>
+    </entry>
+    {% endfor %}
+</feed>

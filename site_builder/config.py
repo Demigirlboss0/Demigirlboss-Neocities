@@ -17,6 +17,7 @@ STATIC_DIR = PROJECT_ROOT / "static"
 
 # Site Metadata
 SITE_TITLE = "Demigirlboss"
+SITE_URL = "https://demigirlboss.neocities.org"
 BASE_URL = "/"
 
 # Content specific paths

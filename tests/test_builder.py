@@ -37,6 +37,7 @@ class TestSiteRenderer(unittest.TestCase):
         """Test that base_path is correctly calculated for different depths."""
         mock_content = ParsedContent(
             title="Test", date=datetime.date.today(), date_display="",
+            iso_date="2026-02-19T12:00:00Z",
             slug="test", content="", raw_content="", metadata={},
             category="Test", url="/blog/post.html"
         )
@@ -51,6 +52,7 @@ class TestSiteRenderer(unittest.TestCase):
 
         root_content = ParsedContent(
             title="Test", date=datetime.date.today(), date_display="",
+            iso_date="2026-02-19T12:00:00Z",
             slug="index", content="", raw_content="", metadata={},
             category="Test", url="/index.html"
         )

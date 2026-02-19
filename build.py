@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 from site_builder import (
-    CONTENT_DIR, OUTPUT_DIR, STATIC_DIR, TEMPLATES_DIR,
+    CONTENT_DIR, OUTPUT_DIR, STATIC_DIR, TEMPLATES_DIR, SITE_URL, SITE_TITLE,
     ContentParser, SiteRenderer, ParsedContent, logger
 )
 
@@ -18,6 +18,33 @@ class SiteBuilder:
         self.parser = ContentParser()
         self.renderer = SiteRenderer()
         self.all_content: List[ParsedContent] = []
+
+    def generate_feed(self):
+        """Generates an Atom XML feed for the site."""
+        logger.info("Generating Atom feed...")
+        
+        # Sort content by date (newest first) and exclude index files
+        feed_items = sorted(
+            [c for c in self.all_content if c.slug != 'index'],
+            key=lambda x: x.date,
+            reverse=True
+        )[:20]
+
+        if not feed_items:
+            return
+
+        context = {
+            'site_title': SITE_TITLE,
+            'site_url': SITE_URL,
+            'last_updated': feed_items[0].iso_date,
+            'items': feed_items
+        }
+
+        xml_output = self.renderer.render('atom.xml', context)
+        
+        with open(OUTPUT_DIR / "atom.xml", "w", encoding="utf-8") as f:
+            f.write(xml_output)
+        logger.info(f"Feed generated at {OUTPUT_DIR}/atom.xml")
 
     def clean_output(self):
         """Prepares the output directory."""
@@ -156,6 +183,7 @@ class SiteBuilder:
                 f.write(html)
 
         self.build_portfolio_index(updates)
+        self.generate_feed()
         logger.info("Build Complete! ✨")
 
     def build_portfolio_index(self, updates):
@@ -174,6 +202,7 @@ class SiteBuilder:
                 title="Portfolio",
                 date=date.today(),
                 date_display="",
+                iso_date=date.today().strftime('%Y-%m-%dT12:00:00Z'),
                 slug="index",
                 content="",
                 raw_content="",
