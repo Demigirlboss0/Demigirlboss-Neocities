@@ -169,21 +169,23 @@ h1 {
     letter-spacing: -3px;
 }
 
-h1::before {
-    content: "[ SESSION_ACTIVE ]";
-    display: block;
+/* The "Data Feed" Label */
+main::before {
+    content: "[ DATA_STREAM // SESSION_ACTIVE ]";
+    position: absolute;
+    top: 20px;
+    left: 40px;
     font-size: 0.7rem;
-    letter-spacing: 5px;
+    letter-spacing: 3px;
     color: var(--sapphire);
-    font-style: normal;
-    margin-bottom: 10px;
-    opacity: 0.7;
+    opacity: 0.5;
 }
 
 p {
     margin-bottom: 1.5rem;
     font-size: 1.1rem;
     color: var(--text);
+    position: relative;
 }
 
 /* HYPERLINK VISIBILITY IMPROVEMENT */

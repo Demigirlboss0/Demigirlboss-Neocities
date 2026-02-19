@@ -81,9 +81,6 @@ class ContentParser:
         # 2. Resolve strikethroughs
         html_content = self._resolve_strikethrough(html_content)
 
-        # 3. Inject data-text for glitch effects
-        html_content = self._inject_glitch_data(html_content)
-
         # 3. Sanitize HTML and CSS
         try:
             html_content = bleach.clean(
@@ -138,11 +135,6 @@ class ContentParser:
         """Converts ~~text~~ to <del>text</del>."""
         pattern = r'~~(.*?)~~'
         return re.sub(pattern, r'<del>\1</del>', html)
-
-    def _inject_glitch_data(self, html: str) -> str:
-        """Injects data-text attribute into h1 tags for CSS glitch effects."""
-        pattern = r'<h1>(.*?)</h1>'
-        return re.sub(pattern, r'<h1 data-text="\1">\1</h1>', html, flags=re.IGNORECASE)
 
     def _resolve_internal_links(self, html: str) -> str:
         """

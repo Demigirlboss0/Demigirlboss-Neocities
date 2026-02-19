@@ -39,7 +39,6 @@ The aesthetic is a hybrid of the **Catppuccin Mocha** palette and **Y2K Industri
 - **Neon Rain:** Located in `base.html` as 20 `<i>` tags, animated in `style.css`.
 - **Industrial Panels:** Uses `clip-path: polygon(...)` to create chamfered edges.
 - **Glassmorphism:** Achieved via `backdrop-filter: blur()` and semi-transparent backgrounds.
-- **Glitch Text:** Uses CSS pseudo-elements (`::before`/`::after`) and the `data-text` attribute to create chromatic aberration.
 
 ### Making Changes
 - **Colors:** Edit the `:root` variables in `style.css`.

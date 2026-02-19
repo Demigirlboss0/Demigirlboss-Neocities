@@ -66,4 +66,3 @@ PYTHONPATH=. python3 tests/test_builder.py
 ## 5. Helpful Tips
 - **Strikethrough:** Use `~~text~~` for ~~strikethrough~~.
 - **Internal Links:** You can link to other markdown files using `.md` (e.g., `[Link](page.md)`). The builder converts these to `.html` automatically.
-- **Glitch Text:** The top-level `h1` in any page automatically receives a high-tech glitch animation.
