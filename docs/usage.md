@@ -67,7 +67,24 @@ PYTHONPATH=. python3 tests/test_builder.py
 - **Strikethrough:** Use `~~text~~` for ~~strikethrough~~.
 - **Internal Links:** You can link to other markdown files using `.md` (e.g., `[Link](page.md)`). The builder converts these to `.html` automatically.
 
-## 6. Syndication (Atom Feed)
+## 6. Industrial Callouts (Asides)
+
+You can create styled callouts or side-notes using the following syntax:
+
+```markdown
+!!! note "Optional Title"
+    Your content goes here. Indentation is required!
+
+!!! warning "SYSTEM OVERRIDE"
+    This is a warning block.
+
+!!! tip
+    This is a tip block with no custom title.
+```
+
+Supported types: `note`, `warning`, `tip`.
+
+## 7. Syndication (Atom Feed)
 
 The site automatically generates an Atom feed at `/atom.xml` during every build. 
 - Feed readers can auto-discover this link.

@@ -394,6 +394,47 @@ a:hover {
 }
 
 /* ======================
+   INDUSTRIAL CALLOUTS (ADMONITIONS)
+   ====================== */
+.admonition {
+    margin: 30px 0;
+    padding: 20px 25px;
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 4px solid var(--mauve);
+    backdrop-filter: blur(5px);
+    position: relative;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+}
+
+.admonition-title {
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.75rem;
+    margin-bottom: 10px;
+    color: var(--mauve);
+    display: flex;
+    justify-content: space-between;
+}
+
+.admonition-title::after {
+    content: "[ SUPPLEMENTAL_DATA ]";
+    opacity: 0.5;
+    font-size: 0.6rem;
+}
+
+/* Specific Types */
+.admonition.note { border-left-color: var(--sapphire); }
+.admonition.note .admonition-title { color: var(--sapphire); }
+
+.admonition.warning { border-left-color: var(--red); }
+.admonition.warning .admonition-title { color: var(--red); }
+.admonition.warning .admonition-title::after { content: "[ WARNING_OVERRIDE ]"; }
+
+.admonition.tip { border-left-color: var(--flamingo); }
+.admonition.tip .admonition-title { color: var(--flamingo); }
+
+/* ======================
    FOOTER
    ====================== */
 footer {

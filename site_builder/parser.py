@@ -56,7 +56,9 @@ class ContentParser:
             'extra',
             'md_in_html',
             'nl2br',
-            'sane_lists'
+            'sane_lists',
+            'admonition',
+            'attr_list'
         ]
         self.css_sanitizer = CSSSanitizer()
 
