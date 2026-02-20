@@ -23,7 +23,10 @@ class SiteBuilder:
         """Generates an Atom XML feed for the site."""
         logger.info("Generating Atom feed...")
         
-        # Sort content by date (newest first) and exclude index files
+        # Sort content by date (newest first) and exclude index files for entry list
+        # but consider ALL content for the feed-level 'updated' time
+        all_sorted = sorted(self.all_content, key=lambda x: x.iso_date, reverse=True)
+        
         feed_items = sorted(
             [c for c in self.all_content if c.slug != 'index'],
             key=lambda x: x.date,
@@ -33,8 +36,8 @@ class SiteBuilder:
         if not feed_items:
             return
 
-        # Feed updated date should be the date of the newest item
-        last_updated = feed_items[0].iso_date
+        # Feed updated date should be the date of the newest physical change
+        last_updated = all_sorted[0].iso_date
 
         context = {
             'site_title': SITE_TITLE,
@@ -183,6 +186,7 @@ class SiteBuilder:
         # Build Indices (Now simplified by frontmatter)
         self.build_index_page('portfolio', 'portfolio.html', updates)
         self.build_index_page('wiki', 'wiki.html', updates)
+        self.build_index_page('blog', 'base.html', updates)
         
         # Build root index
         root_index = next((c for c in self.all_content if c.slug == 'index' and c.url == '/index.html'), None)
@@ -196,8 +200,8 @@ class SiteBuilder:
 
     def build_index_page(self, folder_name: str, template: str, updates: List[Dict[str, Any]]):
         """Generic builder for section index pages."""
-        # Find the index content object for this section
-        index_url = f"/{folder_name}/index.html"
+        # Find the index content object for this section (allowing for slugified url)
+        index_url = f"/{folder_name.lower()}/index.html"
         index_content = next((c for c in self.all_content if c.url == index_url), None)
         
         if not index_content:
@@ -206,10 +210,10 @@ class SiteBuilder:
 
         # Gather relevant items for the template
         extra_context = {}
-        if folder_name == 'portfolio':
+        if folder_name.lower() == 'portfolio':
             items = [c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index']
             extra_context['portfolio_items'] = sorted(items, key=lambda x: x.date, reverse=True)
-        elif folder_name == 'wiki':
+        elif folder_name.lower() == 'wiki':
             items = [c for c in self.all_content if 'wiki' in str(c.url) and c.slug != 'index']
             topics = {}
             for item in items:
@@ -221,6 +225,10 @@ class SiteBuilder:
                 {'name': name, 'articles': sorted(items, key=lambda x: x.date, reverse=True)}
                 for name in sorted(topics.keys())
             ]
+        elif folder_name.lower() == 'blog':
+            # For blog, we might want to list posts if we use a specific template, 
+            # but currently it uses base.html which just shows the content of index.md.
+            pass
 
         html = self.renderer.render_page(
             content=index_content,
@@ -229,7 +237,7 @@ class SiteBuilder:
             **extra_context
         )
         
-        output_path = OUTPUT_DIR / folder_name / "index.html"
+        output_path = OUTPUT_DIR / folder_name.lower() / "index.html"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html)
