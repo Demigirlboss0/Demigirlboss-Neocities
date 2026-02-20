@@ -19,13 +19,13 @@ class ParsedContent:
     title: str
     date: datetime.date
     date_display: str
-    iso_date: str # Added for Atom/RSS
+    iso_date: str 
     slug: str
     content: str
     raw_content: str
     metadata: Dict[str, Any]
     category: str
-    topic: Optional[str] # Added for Wiki
+    topic: Optional[str]
     url: str
 
     def __post_init__(self):
@@ -46,7 +46,6 @@ class ParsedContent:
 class ContentParser:
     """Handles parsing of Markdown files with sanitization, link resolution, and schema validation."""
     
-    # Define required fields for specific categories
     SCHEMA_CONFIG = {
         'Portfolio': ['thumbnail', 'description'],
         'Blog': [] 
@@ -63,6 +62,13 @@ class ContentParser:
         ]
         self.css_sanitizer = CSSSanitizer()
 
+    def slugify(self, text: str) -> str:
+        """Standard web slugifier: lowercase, no spaces, no special chars."""
+        text = text.lower()
+        text = re.sub(r'[^\w\s-]', '', text)
+        text = re.sub(r'[\s_]+', '-', text)
+        return text.strip('-')
+
     def parse_file(self, file_path: Path) -> ParsedContent:
         if not file_path.exists():
             raise FileNotFoundError(f"Content file not found: {file_path}")
@@ -76,19 +82,12 @@ class ContentParser:
             logger.error(msg)
             raise ValueError(msg) from e
 
-        # Normalize smart quotes before Markdown processing
         raw_content = post.content.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
-
-        # Convert Markdown to HTML
         html_content = markdown.markdown(raw_content, extensions=self.extensions)
 
-        # 1. Resolve .md links to .html links safely
         html_content = self._resolve_internal_links(html_content)
-
-        # 2. Resolve strikethroughs
         html_content = self._resolve_strikethrough(html_content)
 
-        # 3. Sanitize HTML and CSS
         try:
             html_content = bleach.clean(
                 html_content,
@@ -105,7 +104,6 @@ class ContentParser:
         slug = file_path.stem
         date_obj = self._parse_date(metadata.get('date'), file_path)
 
-        # Determine Category and Topic
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
         
@@ -115,19 +113,17 @@ class ContentParser:
         
         category = category_name.title()
         
-        # Handle Wiki Topic
         topic = None
         if is_wiki:
-            topic = metadata.get('topic')
-            if not topic:
-                # Fallback to the immediate parent directory name if not root of wiki
-                if file_path.parent.name != "wiki":
-                    topic = file_path.parent.name
-                else:
-                    topic = "Uncategorized"
-            topic = topic.title()
+            if slug != "index":
+                topic = metadata.get('topic')
+                if not topic:
+                    if file_path.parent.name != "wiki":
+                        topic = file_path.parent.name
+                    else:
+                        topic = "Uncategorized"
+                topic = topic.title()
 
-        # 3. Metadata Schema Validation
         self._validate_metadata_schema(category, metadata, file_path)
 
         return ParsedContent(
@@ -145,50 +141,41 @@ class ContentParser:
         )
 
     def _validate_metadata_schema(self, category: str, metadata: Dict[str, Any], file_path: Path):
-        """Validates that required metadata fields exist for the given category."""
         required_fields = self.SCHEMA_CONFIG.get(category, [])
         missing = [field for field in required_fields if field not in metadata or not str(metadata[field]).strip()]
-        
         if missing:
             msg = f"Missing required metadata for {category} in {file_path}: {', '.join(missing)}"
             logger.warning(msg)
-            print(f"WARNING: {msg}", file=sys.stderr)
 
     def _resolve_strikethrough(self, html: str) -> str:
-        """Converts ~~text~~ to <del>text</del>."""
         pattern = r'~~(.*?)~~'
         return re.sub(pattern, r'<del>\1</del>', html)
 
     def _resolve_internal_links(self, html: str) -> str:
         """
         Converts <a href="path/to/file.md"> to <a href="path/to/file.html">.
-        Handles fragments (#) and query parameters (?).
+        Handles fragments (#), query parameters (?), and slugification.
         """
-        # Improved Regex:
-        # Matches href="...md" followed by either a quote, #, or ?
         # Group 1: href=" or href='
-        # Group 2: path before .md
+        # Group 2: The path part before .md (allowing spaces)
         # Group 3: optional #fragment or ?query
         # Group 4: closing quote
-        pattern = r'(href=["\'])([^"\' >]+)\.md([#?][^"\' >]*)?(["\'])'
-        
-        # We also need a simpler one for when there is NO extra part (fragment/query)
-        # Because the space in the character class above might be tricky.
-        # Let's use a simpler approach: replace .md before the first quote or delimiter.
+        pattern = r'(href=["\'])([^"\']+?)\.md([#?][^"\' >]*)?(["\'])'
         
         def replace_md(match):
             quote_start, path, extra, quote_end = match.groups()
             extra = extra if extra else ""
-            return f"{quote_start}{path}.html{extra}{quote_end}"
             
-        # First, handle those with extras
-        html = re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
-        
-        # Then, handle simple ones: href="path.md"
-        pattern_simple = r'(href=["\'])([^"\' >]+)\.md(["\'])'
-        html = re.sub(pattern_simple, r'\1\2.html\3', html, flags=re.IGNORECASE)
-        
-        return html
+            # Slugify the path while preserving slashes
+            if '/' in path:
+                parts = path.split('/')
+                new_path = "/".join([self.slugify(p) for p in parts])
+            else:
+                new_path = self.slugify(path)
+                
+            return f"{quote_start}{new_path}.html{extra}{quote_end}"
+            
+        return re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
 
     def _parse_date(self, date_val: Any, file_path: Path) -> datetime.date:
         if isinstance(date_val, (datetime.date, datetime.datetime)):
@@ -206,16 +193,19 @@ class ContentParser:
             url = str(metadata['url'])
             return url if url.startswith('/') else f"/{url}"
             
+        clean_slug = self.slugify(slug)
+        if slug == "index": clean_slug = "index"
+
         if topic and "wiki" in file_path.parts:
-            # Topic-based Wiki structure
-            clean_topic = topic.lower().replace(" ", "-")
-            return f"/wiki/{clean_topic}/{slug}.html"
+            clean_topic = self.slugify(topic)
+            return f"/wiki/{clean_topic}/{clean_slug}.html"
 
         try:
             abs_content_dir = CONTENT_DIR.absolute()
             abs_file_path = file_path.absolute()
             if abs_content_dir in abs_file_path.parents:
                 rel_parts = list(abs_file_path.relative_to(abs_content_dir).parts[:-1])
+                rel_parts = [self.slugify(p) for p in rel_parts]
             else:
                 rel_parts = []
         except ValueError:
@@ -223,5 +213,5 @@ class ContentParser:
         
         url_path = "/".join(rel_parts)
         if url_path:
-            return f"/{url_path}/{slug}.html"
-        return f"/{slug}.html"
+            return f"/{url_path}/{clean_slug}.html"
+        return f"/{clean_slug}.html"

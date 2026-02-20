@@ -65,11 +65,11 @@ class SiteBuilder:
         if style_css.exists():
             shutil.copy(style_css, OUTPUT_DIR / "style.css")
         
-        # 2. Copy root/static folder (Global assets)
+        # 2. Copy root/static folder
         if STATIC_DIR.exists():
             shutil.copytree(STATIC_DIR, OUTPUT_DIR / "static", dirs_exist_ok=True)
 
-        # 3. Copy content/static folder (Content-specific assets)
+        # 3. Copy content/static folder
         content_static = CONTENT_DIR / "static"
         if content_static.exists():
             logger.info("Merging content/static into output...")
@@ -83,15 +83,11 @@ class SiteBuilder:
             return
 
         logger.info("🚀 Initiating deployment to Neocities...")
-        
-        # Neocities API expects files to be uploaded via POST /api/upload
-        # We'll upload all files found in the output directory
         url = "https://neocities.org/api/upload"
         headers = {"Authorization": f"Bearer {api_key}"}
 
         try:
             files_to_upload = {}
-            # Open all files for uploading
             opened_files = []
             
             for root, _, files in os.walk(OUTPUT_DIR):
@@ -99,8 +95,6 @@ class SiteBuilder:
                     local_path = Path(root) / file
                     remote_path = local_path.relative_to(OUTPUT_DIR)
                     
-                    # We open the file and add it to the multipart/form-data
-                    # The key is the remote filename
                     f = open(local_path, 'rb')
                     opened_files.append(f)
                     files_to_upload[str(remote_path)] = f
@@ -112,7 +106,6 @@ class SiteBuilder:
             logger.info(f"Syncing {len(files_to_upload)} files...")
             response = requests.post(url, headers=headers, files=files_to_upload)
             
-            # Close all files
             for f in opened_files:
                 f.close()
 
@@ -144,12 +137,7 @@ class SiteBuilder:
         """Returns a list of recent content for the sidebar."""
         # Filter out index files
         content_items = [c for c in self.all_content if c.slug != 'index']
-        
-        sorted_content = sorted(
-            content_items, 
-            key=lambda x: x.date, 
-            reverse=True
-        )
+        sorted_content = sorted(content_items, key=lambda x: x.date, reverse=True)
         return [
             {
                 'title': c.title,
@@ -169,15 +157,13 @@ class SiteBuilder:
 
         # Build individual pages
         for content in self.all_content:
-            # Skip index files - they are handled by specialized index builders
+            # Skip index files - they are handled by specialized builders below
             if content.slug == 'index':
                 continue
 
             template = 'base.html'
             if 'portfolio' in str(content.url):
                 template = 'portfolio-item.html'
-            elif 'wiki' in str(content.url):
-                template = 'base.html' # Or 'wiki-item.html' if created
             
             rel_url = content.url.lstrip('/')
             output_file = OUTPUT_DIR / rel_url
@@ -194,139 +180,63 @@ class SiteBuilder:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(html)
 
-        self.build_portfolio_index(updates)
-        self.build_wiki_index(updates)
+        # Build Indices (Now simplified by frontmatter)
+        self.build_index_page('portfolio', 'portfolio.html', updates)
+        self.build_index_page('wiki', 'wiki.html', updates)
+        
+        # Build root index
+        root_index = next((c for c in self.all_content if c.slug == 'index' and c.url == '/index.html'), None)
+        if root_index:
+            html = self.renderer.render_page(content=root_index, updates=updates)
+            with open(OUTPUT_DIR / "index.html", 'w', encoding='utf-8') as f:
+                f.write(html)
+
         self.generate_feed()
         logger.info("Build Complete! ✨")
 
-    def build_wiki_index(self, updates):
-        """Generates the main Wiki listing page grouped by topic."""
-        wiki_items = [
-            c for c in self.all_content if 'wiki' in str(c.url) and c.slug != 'index'
-        ]
+    def build_index_page(self, folder_name: str, template: str, updates: List[Dict[str, Any]]):
+        """Generic builder for section index pages."""
+        # Find the index content object for this section
+        index_url = f"/{folder_name}/index.html"
+        index_content = next((c for c in self.all_content if c.url == index_url), None)
         
-        # Group items by topic
-        topics = {}
-        for item in wiki_items:
-            t = item.topic or "Uncategorized"
-            if t not in topics:
-                topics[t] = []
-            topics[t].append(item)
-        
-        # Sort topics alphabetically and items by date
-        sorted_topics = []
-        for topic_name in sorted(topics.keys()):
-            sorted_items = sorted(topics[topic_name], key=lambda x: x.date, reverse=True)
-            sorted_topics.append({
-                'name': topic_name,
-                'articles': sorted_items
-            })
+        if not index_content:
+            logger.warning(f"No index.md found for /{folder_name}/")
+            return
 
-        # Look for content/wiki/index.md
-        from site_builder import WIKI_DIR
-        wiki_index_md = WIKI_DIR / "index.md"
-        if wiki_index_md.exists():
-            content_obj = self.parser.parse_file(wiki_index_md)
-            # Override title if it defaulted to 'Index'
-            if content_obj.title == "Index":
-                content_obj = ParsedContent(
-                    title="Wiki",
-                    date=content_obj.date,
-                    date_display=content_obj.date_display,
-                    iso_date=content_obj.iso_date,
-                    slug=content_obj.slug,
-                    content=content_obj.content,
-                    raw_content=content_obj.raw_content,
-                    metadata=content_obj.metadata,
-                    category=content_obj.category,
-                    topic=content_obj.topic,
-                    url=content_obj.url
-                )
-        else:
-            from datetime import date
-            content_obj = ParsedContent(
-                title="Wiki",
-                date=date.today(),
-                date_display="",
-                iso_date=date.today().strftime('%Y-%m-%dT12:00:00Z'),
-                slug="index",
-                content="",
-                raw_content="",
-                metadata={},
-                category="Wiki",
-                topic=None,
-                url="/wiki/index.html"
-            )
+        # Gather relevant items for the template
+        extra_context = {}
+        if folder_name == 'portfolio':
+            items = [c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index']
+            extra_context['portfolio_items'] = sorted(items, key=lambda x: x.date, reverse=True)
+        elif folder_name == 'wiki':
+            items = [c for c in self.all_content if 'wiki' in str(c.url) and c.slug != 'index']
+            topics = {}
+            for item in items:
+                t = item.topic or "Uncategorized"
+                if t not in topics: topics[t] = []
+                topics[t].append(item)
+            
+            extra_context['topics'] = [
+                {'name': name, 'articles': sorted(items, key=lambda x: x.date, reverse=True)}
+                for name in sorted(topics.keys())
+            ]
 
         html = self.renderer.render_page(
-            content=content_obj,
-            template_name='wiki.html',
+            content=index_content,
+            template_name=template,
             updates=updates,
-            topics=sorted_topics
+            **extra_context
         )
         
-        output_path = OUTPUT_DIR / "wiki" / "index.html"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(html)
-
-    def build_portfolio_index(self, updates):
-        """Generates the main portfolio listing page."""
-        portfolio_items = [
-            c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index'
-        ]
-        portfolio_items.sort(key=lambda x: x.date, reverse=True)
-
-        portfolio_index_md = CONTENT_DIR / "portfolio" / "index.md"
-        if portfolio_index_md.exists():
-            content_obj = self.parser.parse_file(portfolio_index_md)
-            if content_obj.title == "Index":
-                content_obj = ParsedContent(
-                    title="Portfolio",
-                    date=content_obj.date,
-                    date_display=content_obj.date_display,
-                    iso_date=content_obj.iso_date,
-                    slug=content_obj.slug,
-                    content=content_obj.content,
-                    raw_content=content_obj.raw_content,
-                    metadata=content_obj.metadata,
-                    category=content_obj.category,
-                    topic=content_obj.topic,
-                    url=content_obj.url
-                )
-        else:
-            from datetime import date
-            content_obj = ParsedContent(
-                title="Portfolio",
-                date=date.today(),
-                date_display="",
-                iso_date=date.today().strftime('%Y-%m-%dT12:00:00Z'),
-                slug="index",
-                content="",
-                raw_content="",
-                metadata={},
-                category="Portfolio",
-                topic=None,
-                url="/portfolio/index.html"
-            )
-
-        html = self.renderer.render_page(
-            content=content_obj,
-            template_name='portfolio.html',
-            updates=updates,
-            portfolio_items=portfolio_items
-        )
-        
-        output_path = OUTPUT_DIR / "portfolio" / "index.html"
+        output_path = OUTPUT_DIR / folder_name / "index.html"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html)
 
 if __name__ == "__main__":
     import sys
-    
     builder = SiteBuilder()
     builder.build()
-    
     if "--deploy" in sys.argv:
         builder.deploy()
