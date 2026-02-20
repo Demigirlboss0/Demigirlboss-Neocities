@@ -76,8 +76,11 @@ class ContentParser:
             logger.error(msg)
             raise ValueError(msg) from e
 
+        # Normalize smart quotes before Markdown processing
+        raw_content = post.content.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+
         # Convert Markdown to HTML
-        html_content = markdown.markdown(post.content, extensions=self.extensions)
+        html_content = markdown.markdown(raw_content, extensions=self.extensions)
 
         # 1. Resolve .md links to .html links safely
         html_content = self._resolve_internal_links(html_content)
