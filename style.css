@@ -504,6 +504,20 @@ a:hover {
 }
 
 /* ======================
+   STATUS INDICATORS
+   ====================== */
+.status-open {
+    color: #a6e3a1; /* Catppuccin Green */
+    font-weight: 900;
+    text-shadow: 0 0 10px rgba(166, 227, 161, 0.4);
+}
+
+.status-closed {
+    color: var(--red);
+    font-weight: 900;
+}
+
+/* ======================
    FOOTER
    ====================== */
 footer {
