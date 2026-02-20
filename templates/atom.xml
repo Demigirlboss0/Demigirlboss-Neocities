@@ -15,7 +15,7 @@
         <title>{{ item.title }}</title>
         <link href="{{ site_url }}{{ item.url }}" />
         <id>{{ site_url }}{{ item.url }}</id>
-        <updated>{{ item.feed_updated }}</updated>
+        <updated>{{ feed_updated }}</updated>
         <summary>{{ item.category }} - {{ item.date_display }}</summary>
         <content type="html">{{ item.content | forceescape }}</content>
     </entry>
