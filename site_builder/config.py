@@ -23,6 +23,7 @@ BASE_URL = "/"
 # Content specific paths
 PORTFOLIO_DIR = CONTENT_DIR / "portfolio"
 BLOG_DIR = CONTENT_DIR / "blog"
+WIKI_DIR = CONTENT_DIR / "wiki"
 
 # HTML Sanitization Settings
 ALLOWED_TAGS = [

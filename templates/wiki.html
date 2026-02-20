@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ page_title }}</h1>
+
+<div class="wiki-index">
+    {% for topic in topics %}
+    <section class="wiki-topic-section">
+        <h2 class="wiki-topic-header">{{ topic.name }}</h2>
+        <ul class="wiki-item-list">
+            {% for item in topic.items %}
+            <li>
+                <a href="{{ item.url }}" class="wiki-link">
+                    <span class="wiki-link-title">{{ item.title }}</span>
+                    <span class="wiki-link-date">{{ item.date_display }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% else %}
+    <div class="construction-banner">
+        <p>The Wiki is currently empty. Check back later for tutorials and technical guides!</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

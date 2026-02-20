@@ -166,6 +166,8 @@ class SiteBuilder:
             template = 'base.html'
             if 'portfolio' in str(content.url):
                 template = 'portfolio-item.html'
+            elif 'wiki' in str(content.url):
+                template = 'base.html' # Or 'wiki-item.html' if created
             
             rel_url = content.url.lstrip('/')
             output_file = OUTPUT_DIR / rel_url
@@ -183,8 +185,65 @@ class SiteBuilder:
                 f.write(html)
 
         self.build_portfolio_index(updates)
+        self.build_wiki_index(updates)
         self.generate_feed()
         logger.info("Build Complete! ✨")
+
+    def build_wiki_index(self, updates):
+        """Generates the main Wiki listing page grouped by topic."""
+        wiki_items = [
+            c for c in self.all_content if 'wiki' in str(c.url) and c.slug != 'index'
+        ]
+        
+        # Group items by topic
+        topics = {}
+        for item in wiki_items:
+            t = item.topic or "Uncategorized"
+            if t not in topics:
+                topics[t] = []
+            topics[t].append(item)
+        
+        # Sort topics alphabetically and items by date
+        sorted_topics = []
+        for topic_name in sorted(topics.keys()):
+            sorted_items = sorted(topics[topic_name], key=lambda x: x.date, reverse=True)
+            sorted_topics.append({
+                'name': topic_name,
+                'items': sorted_items
+            })
+
+        # Look for content/wiki/index.md
+        from site_builder import WIKI_DIR
+        wiki_index_md = WIKI_DIR / "index.md"
+        if wiki_index_md.exists():
+            content_obj = self.parser.parse_file(wiki_index_md)
+        else:
+            from datetime import date
+            content_obj = ParsedContent(
+                title="Wiki",
+                date=date.today(),
+                date_display="",
+                iso_date=date.today().strftime('%Y-%m-%dT12:00:00Z'),
+                slug="index",
+                content="",
+                raw_content="",
+                metadata={},
+                category="Wiki",
+                topic=None,
+                url="/wiki/index.html"
+            )
+
+        html = self.renderer.render_page(
+            content=content_obj,
+            template_name='wiki.html',
+            updates=updates,
+            topics=sorted_topics
+        )
+        
+        output_path = OUTPUT_DIR / "wiki" / "index.html"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
 
     def build_portfolio_index(self, updates):
         """Generates the main portfolio listing page."""
@@ -208,6 +267,7 @@ class SiteBuilder:
                 raw_content="",
                 metadata={},
                 category="Portfolio",
+                topic=None,
                 url="/portfolio/index.html"
             )
 

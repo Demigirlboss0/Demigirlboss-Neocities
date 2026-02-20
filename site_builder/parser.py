@@ -25,6 +25,7 @@ class ParsedContent:
     raw_content: str
     metadata: Dict[str, Any]
     category: str
+    topic: Optional[str] # Added for Wiki
     url: str
 
     def __post_init__(self):
@@ -101,13 +102,27 @@ class ContentParser:
         slug = file_path.stem
         date_obj = self._parse_date(metadata.get('date'), file_path)
 
-        # Determine Category
+        # Determine Category and Topic
         category_name = metadata.get('category')
+        is_wiki = "wiki" in file_path.parts
+        
         if not category_name:
             parent_name = file_path.parent.name
             category_name = parent_name if parent_name and parent_name != CONTENT_DIR.name else 'General'
         
         category = category_name.title()
+        
+        # Handle Wiki Topic
+        topic = None
+        if is_wiki:
+            topic = metadata.get('topic')
+            if not topic:
+                # Fallback to the immediate parent directory name if not root of wiki
+                if file_path.parent.name != "wiki":
+                    topic = file_path.parent.name
+                else:
+                    topic = "Uncategorized"
+            topic = topic.title()
 
         # 3. Metadata Schema Validation
         self._validate_metadata_schema(category, metadata, file_path)
@@ -122,7 +137,8 @@ class ContentParser:
             raw_content=post.content,
             metadata=metadata,
             category=category,
-            url=self._generate_url(file_path, slug, metadata)
+            topic=topic,
+            url=self._generate_url(file_path, slug, metadata, topic)
         )
 
     def _validate_metadata_schema(self, category: str, metadata: Dict[str, Any], file_path: Path):
@@ -182,11 +198,16 @@ class ContentParser:
                     continue
         return datetime.date.fromtimestamp(file_path.stat().st_mtime)
 
-    def _generate_url(self, file_path: Path, slug: str, metadata: Dict[str, Any]) -> str:
+    def _generate_url(self, file_path: Path, slug: str, metadata: Dict[str, Any], topic: Optional[str] = None) -> str:
         if 'url' in metadata:
             url = str(metadata['url'])
             return url if url.startswith('/') else f"/{url}"
             
+        if topic and "wiki" in file_path.parts:
+            # Topic-based Wiki structure
+            clean_topic = topic.lower().replace(" ", "-")
+            return f"/wiki/{clean_topic}/{slug}.html"
+
         try:
             abs_content_dir = CONTENT_DIR.absolute()
             abs_file_path = file_path.absolute()
