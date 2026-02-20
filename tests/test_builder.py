@@ -36,6 +36,7 @@ class TestSiteRenderer(unittest.TestCase):
         mock_content = ParsedContent(
             title="Test", date=datetime.date.today(), date_display="",
             iso_date="2026-02-19T12:00:00Z",
+            published_date="2026-02-19T12:00:00Z",
             slug="post", content="", raw_content="", metadata={},
             category="Test", topic=None, url="/blog/post.html"
         )
@@ -48,6 +49,7 @@ class TestSiteRenderer(unittest.TestCase):
         root_content = ParsedContent(
             title="Test", date=datetime.date.today(), date_display="",
             iso_date="2026-02-19T12:00:00Z",
+            published_date="2026-02-19T12:00:00Z",
             slug="index", content="", raw_content="", metadata={},
             category="Test", topic=None, url="/index.html"
         )

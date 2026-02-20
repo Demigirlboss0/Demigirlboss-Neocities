@@ -33,15 +33,13 @@ class SiteBuilder:
         if not feed_items:
             return
 
-        from datetime import datetime, timezone
-        # Use current time for the feed updated field to signal a change to readers
-        now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Feed updated date should be the date of the newest item
+        last_updated = feed_items[0].iso_date
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'last_updated': now_iso,
-            'feed_updated': now_iso,
+            'last_updated': last_updated,
             'items': feed_items
         }
 

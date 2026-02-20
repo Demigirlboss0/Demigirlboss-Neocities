@@ -20,6 +20,7 @@ class ParsedContent:
     date: datetime.date
     date_display: str
     iso_date: str 
+    published_date: str # Original publication date
     slug: str
     content: str
     raw_content: str
@@ -102,7 +103,20 @@ class ContentParser:
         # Extract metadata
         metadata = post.metadata
         slug = file_path.stem
+        
+        # Handle date parsing
         date_obj = self._parse_date(metadata.get('date'), file_path)
+        
+        # Use frontmatter date for published, but current time for iso_date (updated)
+        # to ensure feed readers always see it as a fresh change if needed.
+        # Actually, standard Atom is better: 
+        # published = original date
+        # updated = file mtime or frontmatter date
+        published_iso = date_obj.strftime('%Y-%m-%dT12:00:00Z')
+        
+        # We will use the actual file modification time for the strictly required 'updated' field
+        mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
+        updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
@@ -130,7 +144,8 @@ class ContentParser:
             title=str(metadata.get('title', slug.replace('_', ' ').title())),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
-            iso_date=date_obj.strftime('%Y-%m-%dT12:00:00Z'),
+            iso_date=updated_iso,
+            published_date=published_iso,
             slug=slug,
             content=html_content,
             raw_content=post.content,
