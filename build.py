@@ -186,7 +186,7 @@ class SiteBuilder:
         # Build Indices (Now simplified by frontmatter)
         self.build_index_page('portfolio', 'portfolio.html', updates)
         self.build_index_page('wiki', 'wiki.html', updates)
-        self.build_index_page('blog', 'base.html', updates)
+        self.build_index_page('blog', 'blog.html', updates)
         
         # Build root index
         root_index = next((c for c in self.all_content if c.slug == 'index' and c.url == '/index.html'), None)
@@ -226,9 +226,8 @@ class SiteBuilder:
                 for name in sorted(topics.keys())
             ]
         elif folder_name.lower() == 'blog':
-            # For blog, we might want to list posts if we use a specific template, 
-            # but currently it uses base.html which just shows the content of index.md.
-            pass
+            items = [c for c in self.all_content if 'blog' in str(c.url) and c.slug != 'index']
+            extra_context['posts'] = sorted(items, key=lambda x: x.date, reverse=True)
 
         html = self.renderer.render_page(
             content=index_content,

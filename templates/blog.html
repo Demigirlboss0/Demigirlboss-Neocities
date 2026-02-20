@@ -4,29 +4,23 @@
 <h1 data-text="{{ page_title }}">{{ page_title }}</h1>
 
 {% if content %}
-<div class="wiki-preamble">
+<div class="blog-preamble">
     {{ content | safe }}
 </div>
 {% endif %}
 
 <div class="directory-container">
-    {% for topic in topics %}
     <section class="directory-section">
-        <h2 class="directory-header">{{ topic.name }}</h2>
+        <h2 class="directory-header">ARCHIVE_LOGS</h2>
         <div class="directory-list">
-            {% for item in topic.articles %}
+            {% for item in posts %}
             <a href="{{ item.url }}" class="directory-entry">
-                <span class="entry-meta">[ {{ item.category }} ]</span>
+                <span class="entry-meta">[ LOG ]</span>
                 <span class="entry-title">{{ item.title }}</span>
                 <span class="entry-date">{{ item.date_display }}</span>
             </a>
             {% endfor %}
         </div>
     </section>
-    {% else %}
-    <div class="construction-banner">
-        <p>This directory is currently empty. Check back later!</p>
-    </div>
-    {% endfor %}
 </div>
 {% endblock %}

@@ -442,70 +442,86 @@ a:hover {
 .admonition.tip .admonition-title { color: var(--flamingo); }
 
 /* ======================
-   WIKI SYSTEM
+   DIRECTORY SYSTEM (WIKI & BLOG)
    ====================== */
-.wiki-topic-section {
-    margin-bottom: 40px;
-    border-bottom: 1px solid var(--glass-border);
-    padding-bottom: 20px;
+.directory-container {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
 }
 
-.wiki-topic-header {
+.directory-section {
+    position: relative;
+    padding-left: 20px;
+    border-left: 1px solid var(--glass-border);
+}
+
+.directory-header {
     color: var(--mauve);
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 20px;
+    letter-spacing: 4px;
+    margin-bottom: 25px;
     display: flex;
     align-items: center;
     gap: 15px;
 }
 
-.wiki-topic-header::before {
+.directory-header::before {
     content: "DIR_";
-    font-size: 0.8rem;
-    opacity: 0.5;
+    font-size: 0.7rem;
     color: var(--sapphire);
+    font-weight: 400;
 }
 
-.wiki-item-list {
-    list-style: none;
-    padding: 0;
-}
-
-.wiki-item-list li {
-    margin-bottom: 10px;
-}
-
-.wiki-link {
+.directory-list {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.directory-entry {
+    display: grid;
+    grid-template-columns: 140px 1fr 120px;
     align-items: center;
-    padding: 10px 15px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 4px;
-    border-left: 2px solid transparent;
+    gap: 20px;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid transparent;
     text-decoration: none;
+    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
 }
 
-.wiki-link:hover {
-    border-left-color: var(--mauve);
+.directory-entry:hover {
     background: rgba(203, 166, 247, 0.05);
+    border-color: var(--mauve);
+    transform: translateX(5px);
+    box-shadow: var(--glow);
 }
 
-.wiki-link-title {
+.entry-meta {
+    font-size: 0.65rem;
+    color: var(--sapphire);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 800;
+}
+
+.entry-title {
     color: var(--text);
     font-weight: 600;
+    font-size: 1rem;
 }
 
-.wiki-link-date {
-    font-size: 0.75rem;
+.entry-date {
+    font-size: 0.7rem;
     color: var(--overlay);
+    text-align: right;
 }
 
-/* ======================
-   STATUS INDICATORS
-   ====================== */
+/* STATUS INDICATORS */
 .status-open {
     color: #a6e3a1; /* Catppuccin Green */
     font-weight: 900;
