@@ -34,7 +34,14 @@ class SiteBuilder:
             return
 
         from datetime import datetime, timezone
+        # Use current time for the feed updated field to signal a change to readers
         now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        # We force each item to appear updated at the time of build 
+        # to ensure feed readers notify the user.
+        for item in feed_items:
+            # We add a dynamic 'feed_updated' attribute to keep the original iso_date intact
+            setattr(item, 'feed_updated', now_iso)
 
         context = {
             'site_title': SITE_TITLE,
