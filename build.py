@@ -33,10 +33,13 @@ class SiteBuilder:
         if not feed_items:
             return
 
+        from datetime import datetime, timezone
+        now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'last_updated': feed_items[0].iso_date,
+            'last_updated': now_iso,
             'items': feed_items
         }
 
@@ -139,8 +142,11 @@ class SiteBuilder:
 
     def get_updates(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Returns a list of recent content for the sidebar."""
+        # Filter out index files
+        content_items = [c for c in self.all_content if c.slug != 'index']
+        
         sorted_content = sorted(
-            self.all_content, 
+            content_items, 
             key=lambda x: x.date, 
             reverse=True
         )
@@ -163,6 +169,10 @@ class SiteBuilder:
 
         # Build individual pages
         for content in self.all_content:
+            # Skip index files - they are handled by specialized index builders
+            if content.slug == 'index':
+                continue
+
             template = 'base.html'
             if 'portfolio' in str(content.url):
                 template = 'portfolio-item.html'
@@ -217,6 +227,21 @@ class SiteBuilder:
         wiki_index_md = WIKI_DIR / "index.md"
         if wiki_index_md.exists():
             content_obj = self.parser.parse_file(wiki_index_md)
+            # Override title if it defaulted to 'Index'
+            if content_obj.title == "Index":
+                content_obj = ParsedContent(
+                    title="Wiki",
+                    date=content_obj.date,
+                    date_display=content_obj.date_display,
+                    iso_date=content_obj.iso_date,
+                    slug=content_obj.slug,
+                    content=content_obj.content,
+                    raw_content=content_obj.raw_content,
+                    metadata=content_obj.metadata,
+                    category=content_obj.category,
+                    topic=content_obj.topic,
+                    url=content_obj.url
+                )
         else:
             from datetime import date
             content_obj = ParsedContent(
@@ -255,6 +280,20 @@ class SiteBuilder:
         portfolio_index_md = CONTENT_DIR / "portfolio" / "index.md"
         if portfolio_index_md.exists():
             content_obj = self.parser.parse_file(portfolio_index_md)
+            if content_obj.title == "Index":
+                content_obj = ParsedContent(
+                    title="Portfolio",
+                    date=content_obj.date,
+                    date_display=content_obj.date_display,
+                    iso_date=content_obj.iso_date,
+                    slug=content_obj.slug,
+                    content=content_obj.content,
+                    raw_content=content_obj.raw_content,
+                    metadata=content_obj.metadata,
+                    category=content_obj.category,
+                    topic=content_obj.topic,
+                    url=content_obj.url
+                )
         else:
             from datetime import date
             content_obj = ParsedContent(

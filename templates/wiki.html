@@ -3,6 +3,12 @@
 {% block content %}
 <h1>{{ page_title }}</h1>
 
+{% if content %}
+<div class="wiki-preamble">
+    {{ content | safe }}
+</div>
+{% endif %}
+
 <div class="wiki-index">
     {% for topic in topics %}
     <section class="wiki-topic-section">
