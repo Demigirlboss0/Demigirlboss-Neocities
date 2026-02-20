@@ -8,7 +8,7 @@
     <section class="wiki-topic-section">
         <h2 class="wiki-topic-header">{{ topic.name }}</h2>
         <ul class="wiki-item-list">
-            {% for item in topic.items %}
+            {% for item in topic.articles %}
             <li>
                 <a href="{{ item.url }}" class="wiki-link">
                     <span class="wiki-link-title">{{ item.title }}</span>

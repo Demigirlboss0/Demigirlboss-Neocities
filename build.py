@@ -209,7 +209,7 @@ class SiteBuilder:
             sorted_items = sorted(topics[topic_name], key=lambda x: x.date, reverse=True)
             sorted_topics.append({
                 'name': topic_name,
-                'items': sorted_items
+                'articles': sorted_items
             })
 
         # Look for content/wiki/index.md
