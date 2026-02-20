@@ -19,6 +19,15 @@ STATIC_DIR = PROJECT_ROOT / "static"
 SITE_TITLE = "Demigirlboss"
 SITE_URL = "https://demigirlboss.neocities.org"
 BASE_URL = "/"
+SITE_DESCRIPTION = "The official website of Demigirlboss - 3D Artist and eclectic tinkerer."
+
+# Metadata Schema
+# Define required fields for specific categories
+SCHEMA_CONFIG = {
+    'Portfolio': ['image', 'description'],
+    'Blog': [],
+    'Wiki': []
+}
 
 # Content specific paths
 PORTFOLIO_DIR = CONTENT_DIR / "portfolio"

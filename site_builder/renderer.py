@@ -2,12 +2,13 @@ import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import minify_html
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from .config import TEMPLATES_DIR, SITE_TITLE, logger
+from .config import TEMPLATES_DIR, SITE_TITLE, SITE_DESCRIPTION, logger
 from .parser import ParsedContent
 
 class SiteRenderer:
-    """Handles Jinja2 template loading and rendering."""
+    """Handles Jinja2 template loading, SEO injection, and HTML minification."""
 
     def __init__(self, templates_dir: Path = TEMPLATES_DIR):
         if not templates_dir.exists():
@@ -21,34 +22,33 @@ class SiteRenderer:
             lstrip_blocks=True
         )
         
-        # Add global variables available to all templates
         self.env.globals.update({
             'site_title': SITE_TITLE,
+            'default_description': SITE_DESCRIPTION,
             'now': datetime.datetime.now(),
             'current_year': datetime.datetime.now().year,
         })
 
-    def render(self, template_name: str, context: Dict[str, Any]) -> str:
-        """Renders a template with the given context."""
+    def render(self, template_name: str, context: Dict[str, Any], minify: bool = False) -> str:
+        """Renders a template and optionally minifies the output."""
         try:
             template = self.env.get_template(template_name)
-            return template.render(context)
+            html = template.render(context)
+            
+            if minify and template_name.endswith('.html'):
+                return minify_html.minify(
+                    html,
+                    minify_css=True,
+                    minify_js=False, # We strictly follow No-JS
+                    remove_processing_instructions=True
+                )
+            return html
         except Exception as e:
             logger.error(f"Error rendering template {template_name}: {e}")
             raise
 
     def render_page(self, content: ParsedContent, template_name: str = 'base.html', updates: List[Dict[str, Any]] = None, **kwargs) -> str:
-        """
-        Specialized method to render a page.
-        
-        Args:
-            content: The parsed content object for the page.
-            template_name: The template to use (default: base.html).
-            updates: A list of recent updates/posts for the sidebar.
-            **kwargs: Additional context variables.
-        """
-        # Determine base_path for relative asset loading (e.g., style.css)
-        # This is a simple heuristic; can be improved by counting depth.
+        """Specialized method to render a page with SEO metadata."""
         url_parts = [p for p in content.url.split('/') if p]
         depth = len(url_parts) - 1
         base_path = '../' * depth if depth > 0 else './'
@@ -56,6 +56,7 @@ class SiteRenderer:
         context = {
             'title': f"{SITE_TITLE} | {content.title}",
             'page_title': content.title,
+            'page_description': content.description or SITE_DESCRIPTION,
             'content': content.content,
             'metadata': content.metadata,
             'updates': updates or [],
@@ -65,4 +66,4 @@ class SiteRenderer:
             **kwargs
         }
         
-        return self.render(template_name, context)
+        return self.render(template_name, context, minify=True)

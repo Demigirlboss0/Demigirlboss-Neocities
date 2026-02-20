@@ -34,7 +34,7 @@ class TestSiteRenderer(unittest.TestCase):
     def test_base_path_calculation(self):
         """Test that base_path is correctly calculated for different depths."""
         mock_content = ParsedContent(
-            title="Test", date=datetime.date.today(), date_display="",
+            title="Test", description="SEO", date=datetime.date.today(), date_display="",
             iso_date="2026-02-19T12:00:00Z",
             published_date="2026-02-19T12:00:00Z",
             slug="post", content="", raw_content="", metadata={},
@@ -47,7 +47,7 @@ class TestSiteRenderer(unittest.TestCase):
         self.assertEqual(base_path, "../")
 
         root_content = ParsedContent(
-            title="Test", date=datetime.date.today(), date_display="",
+            title="Test", description="SEO", date=datetime.date.today(), date_display="",
             iso_date="2026-02-19T12:00:00Z",
             published_date="2026-02-19T12:00:00Z",
             slug="index", content="", raw_content="", metadata={},

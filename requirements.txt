@@ -6,3 +6,4 @@ bleach
 tinycss2
 python-dotenv
 requests
+minify-html

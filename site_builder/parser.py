@@ -11,16 +11,17 @@ import markdown
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 
-from .config import logger, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, CONTENT_DIR
+from .config import logger, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, CONTENT_DIR, SCHEMA_CONFIG
 
 @dataclass(frozen=True)
 class ParsedContent:
     """Structured data for parsed content with validation."""
     title: str
+    description: str # For SEO
     date: datetime.date
     date_display: str
     iso_date: str 
-    published_date: str # Original publication date
+    published_date: str 
     slug: str
     content: str
     raw_content: str
@@ -47,11 +48,6 @@ class ParsedContent:
 class ContentParser:
     """Handles parsing of Markdown files with sanitization, link resolution, and schema validation."""
     
-    SCHEMA_CONFIG = {
-        'Portfolio': ['thumbnail', 'description'],
-        'Blog': [] 
-    }
-
     def __init__(self, extensions: Optional[List[str]] = None):
         self.extensions = extensions or [
             'extra',
@@ -64,10 +60,11 @@ class ContentParser:
         self.css_sanitizer = CSSSanitizer()
 
     def slugify(self, text: str) -> str:
-        """Standard web slugifier: lowercase, no spaces, no special chars."""
+        """Standard web slugifier: lowercase, no spaces, no multiple hyphens."""
         text = text.lower()
         text = re.sub(r'[^\w\s-]', '', text)
         text = re.sub(r'[\s_]+', '-', text)
+        text = re.sub(r'-+', '-', text) # Prevent multiple hyphens
         return text.strip('-')
 
     def parse_file(self, file_path: Path) -> ParsedContent:
@@ -83,6 +80,7 @@ class ContentParser:
             logger.error(msg)
             raise ValueError(msg) from e
 
+        # Normalize smart quotes
         raw_content = post.content.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
         html_content = markdown.markdown(raw_content, extensions=self.extensions)
 
@@ -107,16 +105,16 @@ class ContentParser:
         # Handle date parsing
         date_obj = self._parse_date(metadata.get('date'), file_path)
         
-        # Use frontmatter date for published, but current time for iso_date (updated)
-        # to ensure feed readers always see it as a fresh change if needed.
-        # Actually, standard Atom is better: 
-        # published = original date
-        # updated = file mtime or frontmatter date
+        # Handle manual 'updated' field from frontmatter or fallback to file mtime
+        updated_val = metadata.get('updated')
+        if updated_val:
+            updated_obj = self._parse_date(updated_val, file_path)
+            updated_iso = updated_obj.strftime('%Y-%m-%dT12:00:00Z')
+        else:
+            mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
+            updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
+
         published_iso = date_obj.strftime('%Y-%m-%dT12:00:00Z')
-        
-        # We will use the actual file modification time for the strictly required 'updated' field
-        mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
-        updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
@@ -142,6 +140,7 @@ class ContentParser:
 
         return ParsedContent(
             title=str(metadata.get('title', slug.replace('_', ' ').title())),
+            description=str(metadata.get('description', '')),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
             iso_date=updated_iso,
@@ -156,7 +155,7 @@ class ContentParser:
         )
 
     def _validate_metadata_schema(self, category: str, metadata: Dict[str, Any], file_path: Path):
-        required_fields = self.SCHEMA_CONFIG.get(category, [])
+        required_fields = SCHEMA_CONFIG.get(category, [])
         missing = [field for field in required_fields if field not in metadata or not str(metadata[field]).strip()]
         if missing:
             msg = f"Missing required metadata for {category} in {file_path}: {', '.join(missing)}"
@@ -167,27 +166,16 @@ class ContentParser:
         return re.sub(pattern, r'<del>\1</del>', html)
 
     def _resolve_internal_links(self, html: str) -> str:
-        """
-        Converts <a href="path/to/file.md"> to <a href="path/to/file.html">.
-        Handles fragments (#), query parameters (?), and slugification.
-        """
-        # Group 1: href=" or href='
-        # Group 2: The path part before .md (allowing spaces)
-        # Group 3: optional #fragment or ?query
-        # Group 4: closing quote
         pattern = r'(href=["\'])([^"\']+?)\.md([#?][^"\' >]*)?(["\'])'
         
         def replace_md(match):
             quote_start, path, extra, quote_end = match.groups()
             extra = extra if extra else ""
-            
-            # Slugify the path while preserving slashes
             if '/' in path:
                 parts = path.split('/')
                 new_path = "/".join([self.slugify(p) for p in parts])
             else:
                 new_path = self.slugify(path)
-                
             return f"{quote_start}{new_path}.html{extra}{quote_end}"
             
         return re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
