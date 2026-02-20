@@ -8,6 +8,7 @@ All content is stored in the `content/` directory as Markdown (`.md`) files.
 
 - **Blog Posts:** Place in `content/blog/`.
 - **Portfolio Items:** Place in `content/portfolio/`.
+- **Wiki Articles:** Place in `content/wiki/` (optionally within subfolders).
 - **Static Pages:** Place directly in `content/` (e.g., `index.md`, `about.md`).
 
 ### Images and Assets
@@ -40,7 +41,14 @@ description: "A brief summary of the project."
 ```
 *Note: You can also use `thumbnail: "..."` if you want a specific small image, otherwise it scales the `image` field.*
 
-## 3. Build & Deployment
+## 3. Wiki Management
+
+The Wiki automatically groups content by **Topic**.
+- **Setting Topics:** Either set `topic: "My Topic"` in the frontmatter, or place the file in a subfolder (e.g., `content/wiki/Science/gravity.md`).
+- **Index:** The page at `/wiki/` is automatically updated with new topics and articles.
+- **URLs:** Articles are structured as `/wiki/topic-name/article-slug.html`.
+
+## 4. Build & Deployment
 
 The build system is consolidated into `build.py`.
 

@@ -11,6 +11,7 @@ This document explains the structural layout of the site builder and the "Cyber-
 - `templates/`: Jinja2 HTML templates.
   - `base.html`: The master layout containing the Neon Rain and global structure.
   - `portfolio.html`: The dynamic grid generator for your work.
+  - `wiki.html`: The topic-grouped index for your tutorials.
 - `static/`: Global UI assets (CSS, logos).
 - `content/static/`: Assets specifically for your posts/artwork.
 - `output/`: The final generated site (DO NOT edit directly).
@@ -26,10 +27,11 @@ When you run `build.py`, the following sequence occurs:
    - Markdown is converted to HTML.
    - `.md` links are resolved to `.html`.
    - `~~strikethrough~~` is resolved to `<del>`.
-   - `<h1>` tags are injected with `data-text` for glitch effects.
    - HTML/CSS is sanitized via `bleach` and `tinycss2`.
 5. **Render:** Content is injected into Jinja2 templates. `base_path` is calculated based on directory depth to ensure portable asset links.
-6. **Syndicate:** An `atom.xml` feed is generated using the `templates/atom.xml` template. This involves:
+6. **Special Indices:** Custom logic generates the Portfolio and Wiki index pages.
+7. **Syndicate:** An `atom.xml` feed is generated using the `templates/atom.xml` template.
+ This involves:
    - Sorting content by date.
    - Converting dates to ISO 8601 format.
    - Using absolute URLs (defined in `config.py`).
