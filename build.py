@@ -20,28 +20,37 @@ class SiteBuilder:
         self.all_content: List[ParsedContent] = []
 
     def generate_feed(self):
-        """Generates a strictly compliant Atom XML feed (V5)."""
-        logger.info("Generating Atom feed (V5 - Chronological)...")
+        """Generates a strictly compliant and highly compatible Atom XML feed."""
+        logger.info("Generating Atom feed (V6 - Force Refresh)...")
         
-        # 1. Gather all non-index content
-        feed_items = [c for c in self.all_content if c.slug != 'index']
-        
+        feed_items = sorted(
+            [c for c in self.all_content if c.slug != 'index'],
+            key=lambda x: x.date,
+            reverse=True
+        )[:20]
+
         if not feed_items:
             return
 
-        # 2. Sort by iso_date (last-modified time) descending
-        # This ensures the newest updates are always at the top of the XML
-        feed_items.sort(key=lambda x: x.iso_date, reverse=True)
-        feed_items = feed_items[:20]
+        from datetime import datetime, timezone
+        # Global build time
+        build_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # 3. Feed-level 'updated' is the date of the most recently updated item
-        last_updated = feed_items[0].iso_date
+        # We inject the build_time into each item context specifically for the feed
+        # to ensure every reader sees this as a fresh update.
+        items_with_build_time = []
+        for item in feed_items:
+            # We use a dictionary to extend the context without modifying the frozen dataclass
+            items_with_build_time.append({
+                'content': item,
+                'feed_updated': build_time 
+            })
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'last_updated': last_updated,
-            'items': feed_items
+            'feed_updated': build_time,
+            'items': items_with_build_time
         }
 
         xml_output = self.renderer.render('atom.xml', context)
