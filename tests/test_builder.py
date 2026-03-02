@@ -22,9 +22,7 @@ class TestContentParser(unittest.TestCase):
         
     def test_generate_url(self):
         """Test URL generation logic with slugification."""
-        # Custom override
         self.assertEqual(self.parser._generate_url(Path("content/test.md"), "test", {"url": "/custom.html"}), "/custom.html")
-        # Standard slugification
         self.assertEqual(self.parser._generate_url(Path("content/My Post.md"), "My Post", {}), "/my-post.html")
 
 class TestSiteRenderer(unittest.TestCase):
@@ -35,8 +33,6 @@ class TestSiteRenderer(unittest.TestCase):
         """Test that base_path is correctly calculated for different depths."""
         mock_content = ParsedContent(
             title="Test", description="SEO", date=datetime.date.today(), date_display="",
-            iso_date="2026-02-19T12:00:00Z",
-            published_date="2026-02-19T12:00:00Z",
             slug="post", content="", raw_content="", metadata={},
             category="Test", topic=None, url="/blog/post.html"
         )
@@ -48,8 +44,6 @@ class TestSiteRenderer(unittest.TestCase):
 
         root_content = ParsedContent(
             title="Test", description="SEO", date=datetime.date.today(), date_display="",
-            iso_date="2026-02-19T12:00:00Z",
-            published_date="2026-02-19T12:00:00Z",
             slug="index", content="", raw_content="", metadata={},
             category="Test", topic=None, url="/index.html"
         )

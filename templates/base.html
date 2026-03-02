@@ -17,6 +17,7 @@
 
     <div class="container">
         <main>
+            <h1 data-text="{{ page_title }}">{{ page_title }}</h1>
             {% block content %}
             {{ content | safe }}
             {% endblock %}

@@ -17,11 +17,9 @@ from .config import logger, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, CONTENT_DIR, SCHEM
 class ParsedContent:
     """Structured data for parsed content with validation."""
     title: str
-    description: str # For SEO
+    description: str 
     date: datetime.date
     date_display: str
-    iso_date: str 
-    published_date: str 
     slug: str
     content: str
     raw_content: str
@@ -64,7 +62,7 @@ class ContentParser:
         text = text.lower()
         text = re.sub(r'[^\w\s-]', '', text)
         text = re.sub(r'[\s_]+', '-', text)
-        text = re.sub(r'-+', '-', text) # Prevent multiple hyphens
+        text = re.sub(r'-+', '-', text) 
         return text.strip('-')
 
     def parse_file(self, file_path: Path) -> ParsedContent:
@@ -101,20 +99,7 @@ class ContentParser:
         # Extract metadata
         metadata = post.metadata
         slug = file_path.stem
-        
-        # Handle date parsing
         date_obj = self._parse_date(metadata.get('date'), file_path)
-        
-        # Handle manual 'updated' field from frontmatter or fallback to file mtime
-        updated_val = metadata.get('updated')
-        if updated_val:
-            updated_obj = self._parse_date(updated_val, file_path)
-            updated_iso = updated_obj.strftime('%Y-%m-%dT12:00:00Z')
-        else:
-            mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
-            updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-        published_iso = date_obj.strftime('%Y-%m-%dT12:00:00Z')
 
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
@@ -143,8 +128,6 @@ class ContentParser:
             description=str(metadata.get('description', '')),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
-            iso_date=updated_iso,
-            published_date=published_iso,
             slug=slug,
             content=html_content,
             raw_content=post.content,
@@ -167,7 +150,6 @@ class ContentParser:
 
     def _resolve_internal_links(self, html: str) -> str:
         pattern = r'(href=["\'])([^"\']+?)\.md([#?][^"\' >]*)?(["\'])'
-        
         def replace_md(match):
             quote_start, path, extra, quote_end = match.groups()
             extra = extra if extra else ""
@@ -177,7 +159,6 @@ class ContentParser:
             else:
                 new_path = self.slugify(path)
             return f"{quote_start}{new_path}.html{extra}{quote_end}"
-            
         return re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
 
     def _parse_date(self, date_val: Any, file_path: Path) -> datetime.date:
@@ -195,14 +176,11 @@ class ContentParser:
         if 'url' in metadata:
             url = str(metadata['url'])
             return url if url.startswith('/') else f"/{url}"
-            
         clean_slug = self.slugify(slug)
         if slug == "index": clean_slug = "index"
-
         if topic and "wiki" in file_path.parts:
             clean_topic = self.slugify(topic)
             return f"/wiki/{clean_topic}/{clean_slug}.html"
-
         try:
             abs_content_dir = CONTENT_DIR.absolute()
             abs_file_path = file_path.absolute()
@@ -213,7 +191,6 @@ class ContentParser:
                 rel_parts = []
         except ValueError:
             rel_parts = []
-        
         url_path = "/".join(rel_parts)
         if url_path:
             return f"/{url_path}/{clean_slug}.html"

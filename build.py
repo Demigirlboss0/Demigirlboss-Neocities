@@ -20,13 +20,10 @@ class SiteBuilder:
         self.all_content: List[ParsedContent] = []
 
     def generate_feed(self):
-        """Generates an Atom XML feed for the site."""
-        logger.info("Generating Atom feed...")
+        """Generates a strictly compliant Atom XML feed."""
+        logger.info("Generating Atom feed (V3)...")
         
-        # Sort content by date (newest first) and exclude index files for entry list
-        # but consider ALL content for the feed-level 'updated' time
-        all_sorted = sorted(self.all_content, key=lambda x: x.iso_date, reverse=True)
-        
+        # 1. Sort all non-index content by date
         feed_items = sorted(
             [c for c in self.all_content if c.slug != 'index'],
             key=lambda x: x.date,
@@ -36,13 +33,18 @@ class SiteBuilder:
         if not feed_items:
             return
 
-        # Feed updated date should be the date of the newest physical change
-        last_updated = all_sorted[0].iso_date
+        from datetime import datetime, timezone
+        # Feed-level 'updated' is ALWAYS the moment of generation
+        now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        # Domain extraction for tag: URI scheme
+        domain = SITE_URL.replace("https://", "").replace("http://", "").split("/")[0]
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'last_updated': last_updated,
+            'site_domain': domain,
+            'feed_updated': now_iso,
             'items': feed_items
         }
 
@@ -50,7 +52,7 @@ class SiteBuilder:
         
         with open(OUTPUT_DIR / "atom.xml", "w", encoding="utf-8") as f:
             f.write(xml_output)
-        logger.info(f"Feed generated at {OUTPUT_DIR}/atom.xml")
+        logger.info(f"Feed V3 generated at {OUTPUT_DIR}/atom.xml")
 
     def clean_output(self):
         """Prepares the output directory."""
@@ -138,7 +140,6 @@ class SiteBuilder:
 
     def get_updates(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Returns a list of recent content for the sidebar."""
-        # Filter out index files
         content_items = [c for c in self.all_content if c.slug != 'index']
         sorted_content = sorted(content_items, key=lambda x: x.date, reverse=True)
         return [
@@ -158,9 +159,7 @@ class SiteBuilder:
 
         updates = self.get_updates()
 
-        # Build individual pages
         for content in self.all_content:
-            # Skip index files - they are handled by specialized builders below
             if content.slug == 'index':
                 continue
 
@@ -183,12 +182,10 @@ class SiteBuilder:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(html)
 
-        # Build Indices (Now simplified by frontmatter)
         self.build_index_page('portfolio', 'portfolio.html', updates)
         self.build_index_page('wiki', 'wiki.html', updates)
         self.build_index_page('blog', 'blog.html', updates)
         
-        # Build root index
         root_index = next((c for c in self.all_content if c.slug == 'index' and c.url == '/index.html'), None)
         if root_index:
             html = self.renderer.render_page(content=root_index, updates=updates)
@@ -200,7 +197,6 @@ class SiteBuilder:
 
     def build_index_page(self, folder_name: str, template: str, updates: List[Dict[str, Any]]):
         """Generic builder for section index pages."""
-        # Find the index content object for this section (allowing for slugified url)
         index_url = f"/{folder_name.lower()}/index.html"
         index_content = next((c for c in self.all_content if c.url == index_url), None)
         
@@ -208,7 +204,6 @@ class SiteBuilder:
             logger.warning(f"No index.md found for /{folder_name}/")
             return
 
-        # Gather relevant items for the template
         extra_context = {}
         if folder_name.lower() == 'portfolio':
             items = [c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index']
