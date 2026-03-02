@@ -20,10 +20,9 @@ class SiteBuilder:
         self.all_content: List[ParsedContent] = []
 
     def generate_feed(self):
-        """Generates a strictly compliant Atom XML feed."""
-        logger.info("Generating Atom feed (V3)...")
+        """Generates a strictly compliant and highly compatible Atom XML feed."""
+        logger.info("Generating Atom feed (V4 - High Precision)...")
         
-        # 1. Sort all non-index content by date
         feed_items = sorted(
             [c for c in self.all_content if c.slug != 'index'],
             key=lambda x: x.date,
@@ -34,17 +33,13 @@ class SiteBuilder:
             return
 
         from datetime import datetime, timezone
-        # Feed-level 'updated' is ALWAYS the moment of generation
-        now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-        
-        # Domain extraction for tag: URI scheme
-        domain = SITE_URL.replace("https://", "").replace("http://", "").split("/")[0]
+        # Use precise build time to force reader refresh
+        build_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'site_domain': domain,
-            'feed_updated': now_iso,
+            'feed_updated': build_time,
             'items': feed_items
         }
 
