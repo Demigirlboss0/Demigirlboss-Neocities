@@ -20,26 +20,27 @@ class SiteBuilder:
         self.all_content: List[ParsedContent] = []
 
     def generate_feed(self):
-        """Generates a strictly compliant and highly compatible Atom XML feed."""
-        logger.info("Generating Atom feed (V4 - High Precision)...")
+        """Generates a strictly compliant Atom XML feed (V5)."""
+        logger.info("Generating Atom feed (V5 - Chronological)...")
         
-        feed_items = sorted(
-            [c for c in self.all_content if c.slug != 'index'],
-            key=lambda x: x.date,
-            reverse=True
-        )[:20]
-
+        # 1. Gather all non-index content
+        feed_items = [c for c in self.all_content if c.slug != 'index']
+        
         if not feed_items:
             return
 
-        from datetime import datetime, timezone
-        # Use precise build time to force reader refresh
-        build_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        # 2. Sort by iso_date (last-modified time) descending
+        # This ensures the newest updates are always at the top of the XML
+        feed_items.sort(key=lambda x: x.iso_date, reverse=True)
+        feed_items = feed_items[:20]
+
+        # 3. Feed-level 'updated' is the date of the most recently updated item
+        last_updated = feed_items[0].iso_date
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
-            'feed_updated': build_time,
+            'last_updated': last_updated,
             'items': feed_items
         }
 
@@ -47,7 +48,7 @@ class SiteBuilder:
         
         with open(OUTPUT_DIR / "atom.xml", "w", encoding="utf-8") as f:
             f.write(xml_output)
-        logger.info(f"Feed V3 generated at {OUTPUT_DIR}/atom.xml")
+        logger.info(f"Feed V5 generated at {OUTPUT_DIR}/atom.xml")
 
     def clean_output(self):
         """Prepares the output directory."""
@@ -59,17 +60,11 @@ class SiteBuilder:
     def copy_static(self):
         """Copies static assets from both root/static and content/static."""
         logger.info("Synchronizing static assets...")
-        
-        # 1. Copy global style.css
         style_css = Path("style.css")
         if style_css.exists():
             shutil.copy(style_css, OUTPUT_DIR / "style.css")
-        
-        # 2. Copy root/static folder
         if STATIC_DIR.exists():
             shutil.copytree(STATIC_DIR, OUTPUT_DIR / "static", dirs_exist_ok=True)
-
-        # 3. Copy content/static folder
         content_static = CONTENT_DIR / "static"
         if content_static.exists():
             logger.info("Merging content/static into output...")
@@ -89,12 +84,10 @@ class SiteBuilder:
         try:
             files_to_upload = {}
             opened_files = []
-            
             for root, _, files in os.walk(OUTPUT_DIR):
                 for file in files:
                     local_path = Path(root) / file
                     remote_path = local_path.relative_to(OUTPUT_DIR)
-                    
                     f = open(local_path, 'rb')
                     opened_files.append(f)
                     files_to_upload[str(remote_path)] = f
@@ -105,7 +98,6 @@ class SiteBuilder:
 
             logger.info(f"Syncing {len(files_to_upload)} files...")
             response = requests.post(url, headers=headers, files=files_to_upload)
-            
             for f in opened_files:
                 f.close()
 
@@ -117,7 +109,6 @@ class SiteBuilder:
                     logger.error(f"❌ Deployment failed: {result.get('message')}")
             else:
                 logger.error(f"❌ Deployment failed with status {response.status_code}: {response.text}")
-
         except Exception as e:
             logger.error(f"❌ Deployment error: {e}")
 
@@ -157,7 +148,6 @@ class SiteBuilder:
         for content in self.all_content:
             if content.slug == 'index':
                 continue
-
             template = 'base.html'
             if 'portfolio' in str(content.url):
                 template = 'portfolio-item.html'

@@ -20,6 +20,8 @@ class ParsedContent:
     description: str 
     date: datetime.date
     date_display: str
+    iso_date: str 
+    published_date: str 
     slug: str
     content: str
     raw_content: str
@@ -99,7 +101,20 @@ class ContentParser:
         # Extract metadata
         metadata = post.metadata
         slug = file_path.stem
+        
+        # Handle date parsing
         date_obj = self._parse_date(metadata.get('date'), file_path)
+        
+        # Handle manual 'updated' field from frontmatter or fallback to file mtime
+        updated_val = metadata.get('updated')
+        if updated_val:
+            updated_obj = self._parse_date(updated_val, file_path)
+            updated_iso = updated_obj.strftime('%Y-%m-%dT12:00:00Z')
+        else:
+            mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
+            updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        published_iso = date_obj.strftime('%Y-%m-%dT12:00:00Z')
 
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
@@ -128,6 +143,8 @@ class ContentParser:
             description=str(metadata.get('description', '')),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
+            iso_date=updated_iso,
+            published_date=published_iso,
             slug=slug,
             content=html_content,
             raw_content=post.content,
