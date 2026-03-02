@@ -21,7 +21,7 @@ class SiteBuilder:
 
     def generate_feed(self):
         """Generates a strictly compliant and highly compatible Atom XML feed."""
-        logger.info("Generating Atom feed (V6 - Force Refresh)...")
+        logger.info("Generating Atom feed (V7 - Final Boss)...")
         
         feed_items = sorted(
             [c for c in self.all_content if c.slug != 'index'],
@@ -33,24 +33,28 @@ class SiteBuilder:
             return
 
         from datetime import datetime, timezone
-        # Global build time
         build_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        # We inject the build_time into each item context specifically for the feed
-        # to ensure every reader sees this as a fresh update.
-        items_with_build_time = []
+        # We must absolutize links in the content for readers like Feedbro
+        processed_items = []
         for item in feed_items:
-            # We use a dictionary to extend the context without modifying the frozen dataclass
-            items_with_build_time.append({
-                'content': item,
-                'feed_updated': build_time 
+            absolute_content = self.parser.make_links_absolute(item.content, SITE_URL)
+            processed_items.append({
+                'title': item.title,
+                'url': f"{SITE_URL}{item.url}",
+                'id': f"{SITE_URL}{item.url}", # Stable ID is vital
+                'updated': item.iso_date,
+                'published': f"{item.date.isoformat()}T12:00:00Z",
+                'category': item.category,
+                'date_display': item.date_display,
+                'content': absolute_content
             })
 
         context = {
             'site_title': SITE_TITLE,
             'site_url': SITE_URL,
             'feed_updated': build_time,
-            'items': items_with_build_time
+            'items': processed_items
         }
 
         xml_output = self.renderer.render('atom.xml', context)

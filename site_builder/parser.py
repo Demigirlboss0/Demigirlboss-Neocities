@@ -178,6 +178,15 @@ class ContentParser:
             return f"{quote_start}{new_path}.html{extra}{quote_end}"
         return re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
 
+    def make_links_absolute(self, html: str, site_url: str) -> str:
+        """Converts relative href and src attributes to absolute URLs."""
+        # Fix href="/..." and src="/..."
+        html = re.sub(r'href="/', f'href="{site_url}/', html)
+        html = re.sub(r'src="/', f'src="{site_url}/', html)
+        # Fix relative links that dont start with /
+        # (This is more complex, but we prioritize the root-relative ones we use)
+        return html
+
     def _parse_date(self, date_val: Any, file_path: Path) -> datetime.date:
         if isinstance(date_val, (datetime.date, datetime.datetime)):
             return date_val.date() if isinstance(date_val, datetime.datetime) else date_val

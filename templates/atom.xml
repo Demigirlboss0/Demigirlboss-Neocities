@@ -9,15 +9,15 @@
         <name>{{ site_title }}</name>
     </author>
 
-    {% for entry in items %}
+    {% for item in items %}
     <entry>
-        <title>{{ entry.content.title }}</title>
-        <link href="{{ site_url }}{{ entry.content.url }}" />
-        <id>{{ site_url }}{{ entry.content.url }}</id>
-        <updated>{{ entry.feed_updated }}</updated>
-        <published>{{ entry.content.published_date }}</published>
-        <summary>{{ entry.content.category }} update - {{ entry.content.date_display }}</summary>
-        <content type="html">{{ entry.content.content | forceescape }}</content>
+        <title>{{ item.title }}</title>
+        <link href="{{ item.url }}" />
+        <id>{{ item.id }}</id>
+        <updated>{{ item.updated }}</updated>
+        <published>{{ item.published }}</published>
+        <summary>{{ item.category }} update - {{ item.date_display }}</summary>
+        <content type="html">{{ item.content | forceescape }}</content>
     </entry>
     {% endfor %}
 </feed>

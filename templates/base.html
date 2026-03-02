@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="description" content="{{ page_description }}">
     <title>{{ title }}</title>
-    <link rel="alternate" type="application/atom+xml" title="{{ site_title }} Atom Feed" href="/atom.xml" />
+    <link rel="alternate" type="application/atom+xml" title="{{ site_title }} Atom Feed" href="/atom.xml?v={{ now.strftime('%Y%m%d%H%M%S') }}" />
     <link href="{{ base_path }}style.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body>
