@@ -11,7 +11,10 @@ import markdown
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 
-from .config import logger, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, CONTENT_DIR, SCHEMA_CONFIG
+from .config import (
+    logger, ALLOWED_TAGS, ALLOWED_ATTRIBUTES, CONTENT_DIR, SCHEMA_CONFIG,
+    DEFAULT_CATEGORY, DEFAULT_TOPIC
+)
 
 @dataclass(frozen=True)
 class ParsedContent:
@@ -46,16 +49,11 @@ class ParsedContent:
             raise ValueError(error_msg)
 
 class ContentParser:
-    """Handles parsing of Markdown files with sanitization, link resolution, and schema validation."""
+    """Handles parsing of Markdown files without hardcoded defaults."""
     
     def __init__(self, extensions: Optional[List[str]] = None):
         self.extensions = extensions or [
-            'extra',
-            'md_in_html',
-            'nl2br',
-            'sane_lists',
-            'admonition',
-            'attr_list'
+            'extra', 'md_in_html', 'nl2br', 'sane_lists', 'admonition', 'attr_list'
         ]
         self.css_sanitizer = CSSSanitizer()
 
@@ -76,65 +74,53 @@ class ContentParser:
                 post = frontmatter.load(f)
         except Exception as e:
             msg = f"MALFORMED METADATA in {file_path}: {e}"
-            print(f"CRITICAL ERROR: {msg}", file=sys.stderr)
             logger.error(msg)
             raise ValueError(msg) from e
 
-        # Normalize smart quotes
+        # Pre-processing
         raw_content = post.content.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
         html_content = markdown.markdown(raw_content, extensions=self.extensions)
-
         html_content = self._resolve_internal_links(html_content)
         html_content = self._resolve_strikethrough(html_content)
 
+        # Sanitization
         try:
             html_content = bleach.clean(
-                html_content,
-                tags=ALLOWED_TAGS,
-                attributes=ALLOWED_ATTRIBUTES,
-                css_sanitizer=self.css_sanitizer,
-                strip=True
+                html_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES,
+                css_sanitizer=self.css_sanitizer, strip=True
             )
         except Exception as e:
             logger.error(f"Sanitization error in {file_path}: {e}")
 
-        # Extract metadata
+        # Metadata & Dates
         metadata = post.metadata
         slug = file_path.stem
-        
-        # Handle date parsing
         date_obj = self._parse_date(metadata.get('date'), file_path)
         
-        published_iso = date_obj.strftime('%Y-%m-%dT00:00:00Z')
-        
-        # We will use the actual file modification time for the strictly required 'updated' field
-        mtime = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
-        
-        # LOGIC FIX: updated must NOT be earlier than published
-        if mtime.date() <= date_obj:
-            updated_iso = date_obj.strftime('%Y-%m-%dT00:00:01Z')
-        else:
-            updated_iso = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Build UTC-aware published time (defaults to midnight of the date)
+        published_dt = datetime.datetime.combine(date_obj, datetime.time.min, tzinfo=datetime.timezone.utc)
+        published_iso = published_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+        # Updated time from file or frontmatter
+        mtime_dt = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
+        if mtime_dt < published_dt:
+            # Logic: If mtime is earlier than published day, use published day + 1s
+            updated_dt = published_dt + datetime.timedelta(seconds=1)
+        else:
+            updated_dt = mtime_dt
+        updated_iso = updated_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        # Taxonomies
         category_name = metadata.get('category')
         is_wiki = "wiki" in file_path.parts
-        
         if not category_name:
             parent_name = file_path.parent.name
-            category_name = parent_name if parent_name and parent_name != CONTENT_DIR.name else 'General'
-        
+            category_name = parent_name if parent_name and parent_name != CONTENT_DIR.name else DEFAULT_CATEGORY
         category = category_name.title()
         
         topic = None
-        if is_wiki:
-            if slug != "index":
-                topic = metadata.get('topic')
-                if not topic:
-                    if file_path.parent.name != "wiki":
-                        topic = file_path.parent.name
-                    else:
-                        topic = "Uncategorized"
-                topic = topic.title()
+        if is_wiki and slug != "index":
+            topic = metadata.get('topic', file_path.parent.name if file_path.parent.name != "wiki" else DEFAULT_TOPIC).title()
 
         self._validate_metadata_schema(category, metadata, file_path)
 
@@ -156,35 +142,24 @@ class ContentParser:
 
     def _validate_metadata_schema(self, category: str, metadata: Dict[str, Any], file_path: Path):
         required_fields = SCHEMA_CONFIG.get(category, [])
-        missing = [field for field in required_fields if field not in metadata or not str(metadata[field]).strip()]
+        missing = [f for f in required_fields if f not in metadata or not str(metadata[f]).strip()]
         if missing:
-            msg = f"Missing required metadata for {category} in {file_path}: {', '.join(missing)}"
-            logger.warning(msg)
+            logger.warning(f"Missing metadata for {category} in {file_path}: {', '.join(missing)}")
 
     def _resolve_strikethrough(self, html: str) -> str:
-        pattern = r'~~(.*?)~~'
-        return re.sub(pattern, r'<del>\1</del>', html)
+        return re.sub(r'~~(.*?)~~', r'<del>\1</del>', html)
 
     def _resolve_internal_links(self, html: str) -> str:
         pattern = r'(href=["\'])([^"\']+?)\.md([#?][^"\' >]*)?(["\'])'
         def replace_md(match):
-            quote_start, path, extra, quote_end = match.groups()
-            extra = extra if extra else ""
-            if '/' in path:
-                parts = path.split('/')
-                new_path = "/".join([self.slugify(p) for p in parts])
-            else:
-                new_path = self.slugify(path)
-            return f"{quote_start}{new_path}.html{extra}{quote_end}"
+            q1, path, extra, q2 = match.groups()
+            new_path = "/".join([self.slugify(p) for p in path.split('/')])
+            return f"{q1}{new_path}.html{extra or ''}{q2}"
         return re.sub(pattern, replace_md, html, flags=re.IGNORECASE)
 
     def make_links_absolute(self, html: str, site_url: str) -> str:
-        """Converts relative href and src attributes to absolute URLs."""
-        # Fix href="/..." and src="/..."
         html = re.sub(r'href="/', f'href="{site_url}/', html)
         html = re.sub(r'src="/', f'src="{site_url}/', html)
-        # Fix relative links that dont start with /
-        # (This is more complex, but we prioritize the root-relative ones we use)
         return html
 
     def _parse_date(self, date_val: Any, file_path: Path) -> datetime.date:
@@ -192,32 +167,22 @@ class ContentParser:
             return date_val.date() if isinstance(date_val, datetime.datetime) else date_val
         if isinstance(date_val, str):
             for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%B %d, %Y'):
-                try:
-                    return datetime.datetime.strptime(date_val, fmt).date()
-                except ValueError:
-                    continue
+                try: return datetime.datetime.strptime(date_val, fmt).date()
+                except ValueError: continue
         return datetime.date.fromtimestamp(file_path.stat().st_mtime)
 
     def _generate_url(self, file_path: Path, slug: str, metadata: Dict[str, Any], topic: Optional[str] = None) -> str:
         if 'url' in metadata:
-            url = str(metadata['url'])
-            return url if url.startswith('/') else f"/{url}"
-        clean_slug = self.slugify(slug)
-        if slug == "index": clean_slug = "index"
+            u = str(metadata['url'])
+            return u if u.startswith('/') else f"/{u}"
+        clean_slug = "index" if slug == "index" else self.slugify(slug)
         if topic and "wiki" in file_path.parts:
-            clean_topic = self.slugify(topic)
-            return f"/wiki/{clean_topic}/{clean_slug}.html"
+            return f"/wiki/{self.slugify(topic)}/{clean_slug}.html"
         try:
             abs_content_dir = CONTENT_DIR.absolute()
             abs_file_path = file_path.absolute()
             if abs_content_dir in abs_file_path.parents:
-                rel_parts = list(abs_file_path.relative_to(abs_content_dir).parts[:-1])
-                rel_parts = [self.slugify(p) for p in rel_parts]
-            else:
-                rel_parts = []
-        except ValueError:
-            rel_parts = []
-        url_path = "/".join(rel_parts)
-        if url_path:
-            return f"/{url_path}/{clean_slug}.html"
+                rel_parts = [self.slugify(p) for p in abs_file_path.relative_to(abs_content_dir).parts[:-1]]
+                if rel_parts: return f"/{'/'.join(rel_parts)}/{clean_slug}.html"
+        except ValueError: pass
         return f"/{clean_slug}.html"

@@ -18,8 +18,15 @@ STATIC_DIR = PROJECT_ROOT / "static"
 # Site Metadata
 SITE_TITLE = "Demigirlboss"
 SITE_URL = "https://demigirlboss.neocities.org"
+SITE_DOMAIN = "demigirlboss.neocities.org"
 BASE_URL = "/"
 SITE_DESCRIPTION = "The official website of Demigirlboss - 3D Artist and eclectic tinkerer."
+
+# Build Settings
+FEED_ENTRY_LIMIT = 20
+LATEST_UPDATES_LIMIT = 10
+DEFAULT_CATEGORY = "General"
+DEFAULT_TOPIC = "Uncategorized"
 
 # Metadata Schema
 # Define required fields for specific categories
