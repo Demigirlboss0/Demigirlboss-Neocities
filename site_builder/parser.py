@@ -23,6 +23,7 @@ class ParsedContent:
     description: str 
     date: datetime.date
     date_display: str
+    sort_key: datetime.datetime # For precise sorting
     iso_date: str 
     published_date: str 
     slug: str
@@ -97,18 +98,44 @@ class ContentParser:
         slug = file_path.stem
         date_obj = self._parse_date(metadata.get('date'), file_path)
         
-        # Build UTC-aware published time (defaults to midnight of the date)
-        published_dt = datetime.datetime.combine(date_obj, datetime.time.min, tzinfo=datetime.timezone.utc)
-        published_iso = published_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Parse optional 'time' field (Expected format: HH:MM:SS+ZZ:ZZ)
+        time_val = metadata.get('time')
+        published_dt = None
+        
+        if time_val and isinstance(time_val, str):
+            try:
+                # Combine date and time string for isoformat parsing
+                # This handles the timezone offset automatically
+                dt_str = f"{date_obj.isoformat()}T{time_val}"
+                published_dt = datetime.datetime.fromisoformat(dt_str)
+                # Ensure it is in UTC for the feed strings
+                if published_dt.tzinfo is None:
+                    published_dt = published_dt.replace(tzinfo=datetime.timezone.utc)
+            except ValueError as e:
+                logger.warning(f"Invalid time format '{time_val}' in {file_path}: {e}")
+
+        if not published_dt:
+            # Build UTC-aware published time (defaults to midnight of the date)
+            published_dt = datetime.datetime.combine(date_obj, datetime.time.min, tzinfo=datetime.timezone.utc)
+        
+        published_iso = published_dt.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         # Updated time from file or frontmatter
         mtime_dt = datetime.datetime.fromtimestamp(file_path.stat().st_mtime, datetime.timezone.utc)
-        if mtime_dt < published_dt:
-            # Logic: If mtime is earlier than published day, use published day + 1s
-            updated_dt = published_dt + datetime.timedelta(seconds=1)
+        
+        # If frontmatter has an explicit 'updated' date, use that
+        updated_val = metadata.get('updated')
+        if updated_val:
+            updated_date = self._parse_date(updated_val, file_path)
+            updated_dt = datetime.datetime.combine(updated_date, datetime.time.min, tzinfo=datetime.timezone.utc)
         else:
             updated_dt = mtime_dt
-        updated_iso = updated_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        # LOGIC FIX: updated must NOT be earlier than published
+        if updated_dt < published_dt:
+            updated_dt = published_dt + datetime.timedelta(seconds=1)
+            
+        updated_iso = updated_dt.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
         # Taxonomies
         category_name = metadata.get('category')
@@ -129,6 +156,7 @@ class ContentParser:
             description=str(metadata.get('description', '')),
             date=date_obj,
             date_display=date_obj.strftime('%B %d, %Y'),
+            sort_key=published_dt,
             iso_date=updated_iso,
             published_date=published_iso,
             slug=slug,

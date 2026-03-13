@@ -26,7 +26,7 @@ class SiteBuilder:
         
         feed_items = sorted(
             [c for c in self.all_content if c.slug != 'index'],
-            key=lambda x: x.date,
+            key=lambda x: x.sort_key,
             reverse=True
         )[:FEED_ENTRY_LIMIT]
 
@@ -112,8 +112,10 @@ class SiteBuilder:
                 logger.error(f"Error parsing {md_file}: {e}")
 
     def get_updates(self, limit: int = LATEST_UPDATES_LIMIT) -> List[Dict[str, Any]]:
-        items = [c for c in self.all_content if c.slug != 'index']
-        sorted_content = sorted(items, key=lambda x: x.date, reverse=True)
+        """Returns a list of recent content for the sidebar."""
+        # Filter out index files
+        content_items = [c for c in self.all_content if c.slug != 'index']
+        sorted_content = sorted(content_items, key=lambda x: x.sort_key, reverse=True)
         return [{'title': c.title, 'url': c.url, 'date_display': c.date_display, 'category': c.category} for c in sorted_content[:limit]]
 
     def build(self):
@@ -150,7 +152,7 @@ class SiteBuilder:
 
         ctx = {}
         if folder_name.lower() == 'portfolio':
-            ctx['portfolio_items'] = sorted([c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index'], key=lambda x: x.date, reverse=True)
+            ctx['portfolio_items'] = sorted([c for c in self.all_content if 'portfolio' in str(c.url) and c.slug != 'index'], key=lambda x: x.sort_key, reverse=True)
         elif folder_name.lower() == 'wiki':
             wiki_items = [c for c in self.all_content if 'wiki' in str(c.url) and c.slug != 'index']
             topics = {}
@@ -158,9 +160,9 @@ class SiteBuilder:
                 t = item.topic or DEFAULT_TOPIC
                 if t not in topics: topics[t] = []
                 topics[t].append(item)
-            ctx['topics'] = [{'name': name, 'articles': sorted(items, key=lambda x: x.date, reverse=True)} for name, items in sorted(topics.items())]
+            ctx['topics'] = [{'name': name, 'articles': sorted(items, key=lambda x: x.sort_key, reverse=True)} for name, items in sorted(topics.items())]
         elif folder_name.lower() == 'blog':
-            ctx['posts'] = sorted([c for c in self.all_content if 'blog' in str(c.url) and c.slug != 'index'], key=lambda x: x.date, reverse=True)
+            ctx['posts'] = sorted([c for c in self.all_content if 'blog' in str(c.url) and c.slug != 'index'], key=lambda x: x.sort_key, reverse=True)
 
         html = self.renderer.render_page(content=idx_content, template_name=template, updates=updates, **ctx)
         out = OUTPUT_DIR / folder_name.lower() / "index.html"
